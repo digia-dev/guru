@@ -25,7 +25,7 @@ export default function PenilaianSemester() {
 
   const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
   useEffect(() => {
-    apiClient.get('/subjects').then(res => {
+    apiClient.get('/subjects').then((res: any) => {
       if (res.data.success) setAllSubjects(res.data.data);
     });
   }, []);

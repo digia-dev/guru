@@ -280,7 +280,7 @@ function MateriTab() {
 function KelasTab() {
   const [kelasList, setKelasList] = useState<{ name: string; student_count: number }[]>([]); const [newName, setNewName] = useState(''); const [editName, setEditName] = useState(''); const [editOrig, setEditOrig] = useState('');
   const queryClient = useQueryClient();
-  const fetchKelas = () => { apiClient.get('/classes').then(({ data }) => { if (data.success) setKelasList(data.data); }); };
+  const fetchKelas = () => { apiClient.get('/classes').then(({ data }: any) => { if (data.success) setKelasList(data.data); }); };
   useEffect(() => { fetchKelas(); }, []);
   const addClass = async () => { if (!newName) return; try { await apiClient.post('/classes', { name: newName }); toast.success('Kelas ditambahkan'); setNewName(''); fetchKelas(); queryClient.invalidateQueries({ queryKey: ['classes'] }); } catch (err: any) { toast.error(err?.response?.data?.error || 'Gagal'); } };
   const renameClass = async () => { if (!editName || !editOrig) return; try { await apiClient.put(`/classes/${encodeURIComponent(editOrig)}/${encodeURIComponent(editName)}`); toast.success('Kelas diubah'); setEditName(''); setEditOrig(''); fetchKelas(); queryClient.invalidateQueries({ queryKey: ['classes'] }); } catch (err: any) { toast.error(err?.response?.data?.error || 'Gagal'); } };
@@ -375,20 +375,20 @@ export default function Data() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    apiClient.get('/classes').then(({ data }) => {
+    apiClient.get('/classes').then(({ data }: any) => {
       if (data.success) {
         const names = data.data.map((c: any) => c.name).sort();
         setAllClasses(names);
         if (!selectedClass && names.length > 0) setSelectedClass(names[0]);
       }
-    }).catch((err) => console.error('Classes fetch error:', err));
+    }).catch((err: any) => console.error('Classes fetch error:', err));
   }, []);
 
   useEffect(() => {
     if (isAdm) {
-      apiClient.get('/admin/users').then(({ data }) => {
+      apiClient.get('/admin/users').then(({ data }: any) => {
         if (data.success) setTeachers(data.data.filter((u: any) => u.role === 'guru').map((u: any) => ({ id: u.id, name: u.name })));
-      }).catch((err) => console.error('Teachers fetch error:', err));
+      }).catch((err: any) => console.error('Teachers fetch error:', err));
     }
   }, [isAdm]);
 

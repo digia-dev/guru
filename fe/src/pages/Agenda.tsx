@@ -156,7 +156,7 @@ export default function Agenda() {
   const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
   const [teacherSubjects, setTeacherSubjects] = useState<Subject[]>([]);
   useEffect(() => {
-    apiClient.get('/subjects').then(res => {
+    apiClient.get('/subjects').then((res: any) => {
       if (res.data.success) setAllSubjects(res.data.data);
     });
   }, []);
