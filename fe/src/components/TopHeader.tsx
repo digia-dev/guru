@@ -93,8 +93,8 @@ export default function TopHeader() {
       </div>
 
       {/* Desktop header */}
-      <header className="glass sticky top-0 z-20 hidden lg:flex h-[72px] items-center justify-center px-8">
-        <div className="flex items-center justify-center w-full max-w-lg">
+      <header className="glass sticky top-0 z-20 hidden lg:flex h-[72px] items-center px-8">
+        <div className="flex items-center justify-center flex-1 max-w-lg mx-auto">
           <button
             onClick={() => setSearchOpen(true)}
             className="flex items-center gap-3 bg-surface-secondary hover:bg-surface-tertiary transition-colors rounded-2xl px-4 py-2.5 w-full text-left"
@@ -106,6 +106,7 @@ export default function TopHeader() {
             </div>
           </button>
         </div>
+        <NotificationBell />
       </header>
 
       <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
