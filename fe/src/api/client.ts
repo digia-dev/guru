@@ -11,6 +11,10 @@ const FUNCTIONS_MAP: Record<string, string> = {
 
 let accessToken: string | null = null;
 let onLogout: (() => void) | null = null;
+let asTeacherId: number | null = null;
+
+export function setAsTeacher(id: number | null) { asTeacherId = id; }
+export function getAsTeacher(): number | null { return asTeacherId; }
 
 export function setTokens(access: string) {
   accessToken = access;
@@ -35,6 +39,7 @@ async function callFn(method: string, path: string, body?: any, params?: any) {
   const headers: Record<string, string> = {
     Authorization: token ? `Bearer ${token}` : '',
   };
+  if (asTeacherId) headers['x-as-teacher'] = String(asTeacherId);
 
   const res = await fetch(url, {
     method,
