@@ -38,6 +38,7 @@ async function callFn(method: string, path: string, body?: any, params?: any) {
 
   const headers: Record<string, string> = {
     Authorization: token ? `Bearer ${token}` : '',
+    'x-subpath': subPath + qs,
   };
   if (asTeacherId) headers['x-as-teacher'] = String(asTeacherId);
 
