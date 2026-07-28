@@ -34,7 +34,7 @@ async function callFn(method: string, path: string, body?: any, params?: any) {
   const qs = params ? '?' + new URLSearchParams(params).toString() : '';
 
   const token = accessToken || (await supabase.auth.getSession()).data.session?.access_token;
-  const url = `${supabaseUrl}/functions/v1/${funcName}${subPath}${qs}`;
+  const url = `${supabaseUrl}/functions/v1/${funcName}`;
 
   const headers: Record<string, string> = {
     Authorization: token ? `Bearer ${token}` : '',
