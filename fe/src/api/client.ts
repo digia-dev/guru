@@ -6,7 +6,8 @@ const FUNCTIONS_MAP: Record<string, string> = {
   auth: 'auth', students: 'students', classes: 'classes', attendance: 'attendance',
   grades: 'grades', tabungan: 'tabungan', 'kas-umum': 'kas-umum', materi: 'materi',
   agenda: 'agenda', dashboard: 'dashboard', search: 'search', admin: 'admin',
-  notifications: 'notifications', semesters: 'semesters', 'calendar-events': 'calendar-events',
+  notifications: 'notifications', semesters: 'admin', 'calendar-events': 'calendar-events',
+  subjects: 'admin', activities: 'agenda', 'academic-years': 'admin', logs: 'admin',
 };
 
 let accessToken: string | null = null;

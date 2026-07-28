@@ -137,6 +137,37 @@ Deno.serve(async (req) => {
       return json({ success: true, message: 'Academic year deleted' });
     }
 
+    // Semesters
+    if (path === '/semesters' && method === 'GET') {
+      const { data } = await supabase.from('semesters').select('*').order('start_date');
+      return json({ success: true, data: data || [] });
+    }
+
+    if (path === '/semesters' && method === 'POST') {
+      const body = await req.json();
+      const { data, error } = await supabase.from('semesters').insert(body).select().single();
+      if (error) return json({ success: false, error: error.message }, 500);
+      return json({ success: true, data }, 201);
+    }
+
+    if (path.startsWith('/semesters/') && method === 'PUT' && id) {
+      if (path.endsWith('/activate')) {
+        await supabase.from('semesters').update({ is_active: false }).neq('id', id);
+        const { data, error } = await supabase.from('semesters').update({ is_active: true }).eq('id', id).select().single();
+        if (error || !data) return json({ success: false, error: 'Semester not found' }, 404);
+        return json({ success: true, data });
+      }
+      const body = await req.json();
+      const { data, error } = await supabase.from('semesters').update(body).eq('id', id).select().single();
+      if (error || !data) return json({ success: false, error: 'Semester not found' }, 404);
+      return json({ success: true, data });
+    }
+
+    if (path.startsWith('/semesters/') && method === 'DELETE' && id) {
+      await supabase.from('semesters').delete().eq('id', id);
+      return json({ success: true, message: 'Semester deleted' });
+    }
+
     return json({ success: false, error: 'Not found' }, 404);
   } catch (err: any) { return json({ success: false, error: err.message }, 500); }
 });
