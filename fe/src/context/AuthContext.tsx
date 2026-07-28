@@ -84,6 +84,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
+    if (data.session) {
+      setTokens(data.session.access_token, data.session.refresh_token || '');
+      try {
+        const { data: fnData } = await supabase.functions.invoke('auth', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${data.session.access_token}`, 'x-subpath': '/me' },
+        });
+        if (fnData?.success) setUser(fnData.data);
+      } catch { }
+    }
   };
 
   const register = async (email: string, password: string, name: string) => {
