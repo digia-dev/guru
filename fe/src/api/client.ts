@@ -1,4 +1,23 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { supabase, invokeFunction } from '../lib/supabase';
+
+const FUNCTIONS_MAP: Record<string, string> = {
+  auth: 'auth',
+  students: 'students',
+  classes: 'classes',
+  attendance: 'attendance',
+  grades: 'grades',
+  tabungan: 'tabungan',
+  'kas-umum': 'kas-umum',
+  materi: 'materi',
+  agenda: 'agenda',
+  dashboard: 'dashboard',
+  search: 'search',
+  admin: 'admin',
+  notifications: 'notifications',
+  semesters: 'semesters',
+  'calendar-events': 'calendar-events',
+};
 
 const apiClient = axios.create({
   baseURL: '/api',
@@ -64,7 +83,6 @@ apiClient.interceptors.response.use(
       try {
         const token = getStoredRefreshToken();
         if (!token) throw new Error('No refresh token');
-
         const { data } = await silentClient.post('/auth/refresh', { refreshToken: token });
         if (data.success) {
           setTokens(data.data.accessToken, data.data.refreshToken);
@@ -79,5 +97,23 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export { apiClient };
+
+export async function apiCall(method: string, path: string, body?: any, params?: any) {
+  const [, group, ...rest] = path.split('/');
+  const funcName = FUNCTIONS_MAP[group];
+  const subPath = rest.length ? '/' + rest.join('/') : '';
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+
+  const { data, error } = await supabase.functions.invoke(funcName, {
+    method: method as any,
+    body: body,
+    headers: { 'x-subpath': subPath + qs },
+  });
+
+  if (error) throw error;
+  return data;
+}
 
 export default apiClient;

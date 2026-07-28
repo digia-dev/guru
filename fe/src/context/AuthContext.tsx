@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import apiClient, { setTokens, clearTokens, getStoredRefreshToken, setOnLogout } from '../api/client';
+import { supabase } from '../lib/supabase';
 import { User } from '../types';
 
 interface AuthContextType {
@@ -21,16 +22,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     try {
-      const me = await apiClient.get('/auth/me');
-      if (me.data.success) setUser(me.data.data);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const token = session.access_token;
+      const { data: fnData } = await supabase.functions.invoke('auth', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}`, 'x-subpath': '/me' },
+      });
+      if (fnData?.success) setUser(fnData.data);
     } catch { }
   }, []);
 
   const logout = useCallback(async () => {
-    try {
-      const token = getStoredRefreshToken();
-      if (token) await apiClient.post('/auth/logout', { refreshToken: token });
-    } catch { }
+    await supabase.auth.signOut();
     clearTokens();
     setUser(null);
   }, []);
@@ -41,33 +45,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const restoreSession = async () => {
-      const token = getStoredRefreshToken();
-      if (!token) { setIsLoading(false); return; }
-      try {
-        const { data } = await apiClient.post('/auth/refresh', { refreshToken: token });
-        if (data.success) {
-          setTokens(data.data.accessToken, data.data.refreshToken);
-          const me = await apiClient.get('/auth/me');
-          setUser(me.data.data);
-        }
-      } catch {
-        clearTokens();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setTokens(session.access_token, session.refresh_token || '');
+        try {
+          const { data: fnData } = await supabase.functions.invoke('auth', {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${session.access_token}`, 'x-subpath': '/me' },
+          });
+          if (fnData?.success) setUser(fnData.data);
+        } catch { }
       }
       setIsLoading(false);
     };
     restoreSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        setTokens(session.access_token, session.refresh_token || '');
+        if (event === 'SIGNED_IN') {
+          try {
+            const { data: fnData } = await supabase.functions.invoke('auth', {
+              method: 'GET',
+              headers: { Authorization: `Bearer ${session.access_token}`, 'x-subpath': '/me' },
+            });
+            if (fnData?.success) setUser(fnData.data);
+          } catch { }
+        }
+      } else {
+        clearTokens();
+        setUser(null);
+      }
+    });
+
+    return () => listener?.subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { data } = await apiClient.post('/auth/login', { email, password });
-    if (!data.success) throw new Error(data.error);
-    setTokens(data.data.accessToken, data.data.refreshToken);
-    setUser(data.data.user);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
   };
 
   const register = async (email: string, password: string, name: string) => {
-    const { data } = await apiClient.post('/auth/register', { email, password, name });
-    if (!data.success) throw new Error(data.error);
+    const { error } = await supabase.functions.invoke('auth', {
+      method: 'POST',
+      body: { email, password, name },
+      headers: { 'x-subpath': '/register' },
+    });
+    if (error) throw error;
   };
 
   return (
