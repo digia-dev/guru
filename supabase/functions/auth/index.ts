@@ -15,9 +15,8 @@ Deno.serve(async (req) => {
   const cors = handleCors(req);
   if (cors) return cors;
 
-  const url = new URL(req.url);
-  const path = url.pathname.replace('/functions/v1/auth', '');
   const method = req.method;
+  const path = req.headers.get('x-subpath') || '';
 
   try {
     if (method === 'POST' && path === '/login') return await handleLogin(req);

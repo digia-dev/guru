@@ -10,3 +10,18 @@ export function handleCors(req: Request): Response | null {
   }
   return null;
 }
+
+export function getPath(req: Request): string {
+  return req.headers.get('x-subpath') || '';
+}
+
+export function getSearchParams(req: Request): URLSearchParams {
+  const subpath = getPath(req);
+  return new URLSearchParams(subpath.split('?')[1] || '');
+}
+
+export function getLastPathSegment(req: Request): string {
+  const path = getPath(req).split('?')[0];
+  const parts = path.split('/').filter(Boolean);
+  return parts.pop() || '';
+}

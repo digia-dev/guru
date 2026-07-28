@@ -1,11 +1,11 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders, handleCors } from '../_shared/cors.ts';
+import { corsHeaders, handleCors, getPath, getSearchParams, getLastPathSegment } from '../_shared/cors.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 Deno.serve(async (req) => {
   const cors = handleCors(req); if (cors) return cors;
-  const url = new URL(req.url); const method = req.method;
+  const method = req.method;
   const { data: { user }, error: authErr } = await supabase.auth.getUser(req.headers.get('Authorization')?.replace('Bearer ', '') || '');
   if (authErr || !user) return json({ success: false, error: 'Unauthorized' }, 401);
   const { data: appUser } = await supabase.from('users').select('*').eq('auth_user_id', user.id).single();
@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
   const isAdm = appUser.role === 'admin'; const userId = appUser.id;
 
   try {
-    if (method === 'GET' && url.pathname.includes('/summary')) {
+    if (method === 'GET' && getPath(req).includes('/summary')) {
       let tQ = supabase.from('tabungan').select('student_id, uang_masuk, uang_keluar');
       if (!isAdm) tQ = tQ.eq('teacher_id', userId);
       const { data: tabRows } = await tQ;
@@ -31,12 +31,12 @@ Deno.serve(async (req) => {
       return json({ success: true, data: { total_saldo: totalSaldo, total_setoran_kas_umum: totalKas, per_student: Array.from(perStudent.entries()).map(([k, v]) => ({ student_id: k, saldo: v })) } });
     }
 
-    const id = url.searchParams.get('id') || url.pathname.split('/').pop();
+    const id = getSearchParams(req).get('id') || getLastPathSegment(req);
 
     if (method === 'GET') {
-      const studentId = url.searchParams.get('student_id');
-      const startDate = url.searchParams.get('start_date');
-      const endDate = url.searchParams.get('end_date');
+      const studentId = getSearchParams(req).get('student_id');
+      const startDate = getSearchParams(req).get('start_date');
+      const endDate = getSearchParams(req).get('end_date');
       let q = supabase.from('tabungan').select('*').order('tanggal', { ascending: false }).order('timestamp', { ascending: false });
       if (!isAdm) q = q.eq('teacher_id', userId);
       if (studentId) q = q.eq('student_id', studentId);

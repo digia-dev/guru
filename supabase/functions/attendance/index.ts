@@ -1,24 +1,24 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders, handleCors } from '../_shared/cors.ts';
+import { corsHeaders, handleCors, getPath, getSearchParams } from '../_shared/cors.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 Deno.serve(async (req) => {
   const cors = handleCors(req); if (cors) return cors;
-  const url = new URL(req.url); const method = req.method;
+  const method = req.method;
   const { data: { user }, error: authErr } = await supabase.auth.getUser(req.headers.get('Authorization')?.replace('Bearer ', '') || '');
   if (authErr || !user) return json({ success: false, error: 'Unauthorized' }, 401);
   const { data: appUser } = await supabase.from('users').select('*').eq('auth_user_id', user.id).single();
   if (!appUser) return json({ success: false, error: 'User not found' }, 401);
   const isAdm = appUser.role === 'admin'; const userId = appUser.id;
-  const className = url.searchParams.get('class');
-  const eventDate = url.searchParams.get('event_date');
-  const startDate = url.searchParams.get('start_date');
-  const endDate = url.searchParams.get('end_date');
-  const subjectId = url.searchParams.get('subject_id');
+  const className = getSearchParams(req).get('class');
+  const eventDate = getSearchParams(req).get('event_date');
+  const startDate = getSearchParams(req).get('start_date');
+  const endDate = getSearchParams(req).get('end_date');
+  const subjectId = getSearchParams(req).get('subject_id');
 
   try {
-    if (method === 'GET' && url.pathname.includes('/summary') || method === 'GET' && url.pathname.includes('/trend')) {
+    if (method === 'GET' && getPath(req).includes('/summary') || method === 'GET' && getPath(req).includes('/trend')) {
       let q = supabase.from('attendance').select('keterangan, count');
       if (!isAdm) q = q.eq('teacher_id', userId);
       if (className) q = q.eq('class', className);

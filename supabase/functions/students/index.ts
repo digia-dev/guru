@@ -1,5 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders, handleCors } from '../_shared/cors.ts';
+import { corsHeaders, handleCors, getPath, getSearchParams, getLastPathSegment } from '../_shared/cors.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -7,7 +7,7 @@ const supabase = createClient(supabaseUrl, serviceKey);
 
 Deno.serve(async (req) => {
   const cors = handleCors(req); if (cors) return cors;
-  const url = new URL(req.url); const method = req.method;
+  const method = req.method;
   const { user, error: authErr } = await supabase.auth.getUser(req.headers.get('Authorization')?.replace('Bearer ', '') || '');
   if (authErr || !user) return json({ success: false, error: 'Unauthorized' }, 401);
   const appUser = await supabase.from('users').select('*').eq('auth_user_id', user.id).single();
@@ -16,9 +16,9 @@ Deno.serve(async (req) => {
   const userId = appUser.data.id;
 
   try {
-    if (method === 'GET' && !url.searchParams.has('id') && !url.pathname.includes('/detail')) {
-      const className = url.searchParams.get('class');
-      const search = url.searchParams.get('search');
+    if (method === 'GET' && !getSearchParams(req).has('id') && !getPath(req).includes('/detail')) {
+      const className = getSearchParams(req).get('class');
+      const search = getSearchParams(req).get('search');
       let query = supabase.from('students').select('*');
       if (!isAdm) query = query.eq('teacher_id', userId);
       if (className) query = query.eq('class', className);
@@ -28,9 +28,9 @@ Deno.serve(async (req) => {
       return json({ success: true, data: data || [] });
     }
 
-    const id = url.searchParams.get('id') || url.pathname.split('/').pop();
+    const id = getSearchParams(req).get('id') || getLastPathSegment(req);
     if (method === 'GET' && id) {
-      if (url.pathname.includes('/detail')) return await getStudentDetail(id, userId, isAdm);
+      if (getPath(req).includes('/detail')) return await getStudentDetail(id, userId, isAdm);
       let q = supabase.from('students').select('*').eq('id', id);
       if (!isAdm) q = q.eq('teacher_id', userId);
       const { data } = await q.single();

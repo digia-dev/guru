@@ -1,17 +1,17 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders, handleCors } from '../_shared/cors.ts';
+import { corsHeaders, handleCors, getPath, getSearchParams, getLastPathSegment } from '../_shared/cors.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 Deno.serve(async (req) => {
   const cors = handleCors(req); if (cors) return cors;
-  const url = new URL(req.url); const method = req.method;
+  const method = req.method;
   const { data: { user }, error: authErr } = await supabase.auth.getUser(req.headers.get('Authorization')?.replace('Bearer ', '') || '');
   if (authErr || !user) return json({ success: false, error: 'Unauthorized' }, 401);
   const { data: appUser } = await supabase.from('users').select('*').eq('auth_user_id', user.id).single();
   if (!appUser) return json({ success: false, error: 'User not found' }, 401);
   const isAdm = appUser.role === 'admin'; const userId = appUser.id;
-  const id = url.searchParams.get('id') || url.pathname.split('/').pop();
+  const id = getSearchParams(req).get('id') || getLastPathSegment(req);
 
   try {
     if (method === 'GET') {

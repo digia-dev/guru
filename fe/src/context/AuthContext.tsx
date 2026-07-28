@@ -27,8 +27,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const token = session.access_token;
-      const res = await fetch(`${supabaseUrl}/functions/v1/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch(`${supabaseUrl}/functions/v1/auth`, {
+        headers: { Authorization: `Bearer ${token}`, 'x-subpath': '/me' },
       });
       const fnData = await res.json();
       if (fnData?.success) setUser(fnData.data);
@@ -51,8 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session) {
         setTokens(session.access_token);
         try {
-          const res = await fetch(`${supabaseUrl}/functions/v1/auth/me`, {
-            headers: { Authorization: `Bearer ${session.access_token}` },
+          const res = await fetch(`${supabaseUrl}/functions/v1/auth`, {
+            headers: { Authorization: `Bearer ${session.access_token}`, 'x-subpath': '/me' },
           });
           const fnData = await res.json();
           if (fnData?.success) setUser(fnData.data);
@@ -67,8 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setTokens(session.access_token);
         if (event === 'SIGNED_IN') {
           try {
-            const res = await fetch(`${supabaseUrl}/functions/v1/auth/me`, {
-              headers: { Authorization: `Bearer ${session.access_token}` },
+            const res = await fetch(`${supabaseUrl}/functions/v1/auth`, {
+              headers: { Authorization: `Bearer ${session.access_token}`, 'x-subpath': '/me' },
             });
             const fnData = await res.json();
             if (fnData?.success) setUser(fnData.data);
@@ -89,8 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data.session) {
       setTokens(data.session.access_token);
       try {
-        const res = await fetch(`${supabaseUrl}/functions/v1/auth/me`, {
-          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        const res = await fetch(`${supabaseUrl}/functions/v1/auth`, {
+          headers: { Authorization: `Bearer ${data.session.access_token}`, 'x-subpath': '/me' },
         });
         const fnData = await res.json();
         if (fnData?.success) setUser(fnData.data);
@@ -99,9 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (email: string, password: string, name: string) => {
-    const res = await fetch(`${supabaseUrl}/functions/v1/auth/register`, {
+    const res = await fetch(`${supabaseUrl}/functions/v1/auth`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-subpath': '/register' },
       body: JSON.stringify({ email, password, name }),
     });
     const data = await res.json();

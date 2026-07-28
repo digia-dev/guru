@@ -1,11 +1,11 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders, handleCors } from '../_shared/cors.ts';
+import { corsHeaders, handleCors, getPath, getSearchParams } from '../_shared/cors.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 Deno.serve(async (req) => {
   const cors = handleCors(req); if (cors) return cors;
-  const url = new URL(req.url); const method = req.method;
+  const method = req.method;
   const { data: { user }, error: authErr } = await supabase.auth.getUser(req.headers.get('Authorization')?.replace('Bearer ', '') || '');
   if (authErr || !user) return json({ success: false, error: 'Unauthorized' }, 401);
   const { data: appUser } = await supabase.from('users').select('*').eq('auth_user_id', user.id).single();
@@ -13,10 +13,10 @@ Deno.serve(async (req) => {
   const isAdm = appUser.role === 'admin'; const userId = appUser.id;
 
   try {
-    if (method === 'GET' && url.pathname.includes('/semester')) {
-      const className = url.searchParams.get('class');
-      const semester = url.searchParams.get('semester') || 'Ganjil';
-      const subjectId = url.searchParams.get('subject_id');
+    if (method === 'GET' && getPath(req).includes('/semester')) {
+      const className = getSearchParams(req).get('class');
+      const semester = getSearchParams(req).get('semester') || 'Ganjil';
+      const subjectId = getSearchParams(req).get('subject_id');
       let stQ = supabase.from('students').select('*').eq('class', className).order('name');
       if (!isAdm) stQ = stQ.eq('teacher_id', userId);
       const { data: students } = await stQ;
@@ -65,10 +65,10 @@ Deno.serve(async (req) => {
     }
 
     if (method === 'GET') {
-      const semester = url.searchParams.get('semester');
-      const className = url.searchParams.get('class');
-      const studentIds = url.searchParams.get('student_ids');
-      const subjectId = url.searchParams.get('subject_id');
+      const semester = getSearchParams(req).get('semester');
+      const className = getSearchParams(req).get('class');
+      const studentIds = getSearchParams(req).get('student_ids');
+      const subjectId = getSearchParams(req).get('subject_id');
       let q = supabase.from('grades').select('*');
       if (!isAdm) q = q.eq('teacher_id', userId);
       if (semester) q = q.eq('semester', semester);
