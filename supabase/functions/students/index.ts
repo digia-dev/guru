@@ -8,7 +8,7 @@ const supabase = createClient(supabaseUrl, serviceKey);
 Deno.serve(async (req) => {
   const cors = handleCors(req); if (cors) return cors;
   const method = req.method;
-  const { user, error: authErr } = await supabase.auth.getUser(req.headers.get('Authorization')?.replace('Bearer ', '') || '');
+  const { data: { user }, error: authErr } = await supabase.auth.getUser(req.headers.get('Authorization')?.replace('Bearer ', '') || '');
   if (authErr || !user) return json({ success: false, error: 'Unauthorized' }, 401);
   const appUser = await supabase.from('users').select('*').eq('auth_user_id', user.id).single();
   if (appUser.error) return json({ success: false, error: 'User not found' }, 401);
