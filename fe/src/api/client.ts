@@ -27,11 +27,16 @@ export function clearTokens() {
 export function setOnLogout(callback: () => void) { onLogout = callback; }
 
 async function callFn(method: string, path: string, body?: any, params?: any) {
-  const [, group, ...rest] = path.split('/');
+  const qsIdx = path.indexOf('?');
+  const qsFromPath = qsIdx >= 0 ? path.slice(qsIdx) : '';
+  const cleanPath = qsIdx >= 0 ? path.slice(0, qsIdx) : path;
+  const [, group, ...rest] = cleanPath.split('/');
   const funcName = FUNCTIONS_MAP[group];
   if (!funcName) throw new Error(`Unknown API route: ${path}`);
   const subPath = rest.length ? '/' + rest.join('/') : '';
-  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+
+  const mergedParams = { ...Object.fromEntries(new URLSearchParams(qsFromPath).entries()), ...params };
+  const qs = Object.keys(mergedParams).length ? '?' + new URLSearchParams(mergedParams).toString() : '';
 
   const token = accessToken || (await supabase.auth.getSession()).data.session?.access_token;
   const url = `${supabaseUrl}/functions/v1/${funcName}`;
