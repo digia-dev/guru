@@ -1,0 +1,27 @@
+{
+  "name": "appguru",
+  "version": "1.0.0",
+  "description": "Aplikasi Manajemen Guru Modern berbasis React + TypeScript + PostgreSQL.",
+  "main": "core.js",
+  "scripts": {
+    "dev": "concurrently -n fe,be -c cyan,green \"npm run dev --prefix fe\" \"npm run dev --prefix be\"",
+    "dev:fe": "npm run dev --prefix fe",
+    "dev:be": "npm run dev --prefix be",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/digia-dev/guru.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/digia-dev/guru/issues"
+  },
+  "homepage": "https://github.com/digia-dev/guru#readme",
+  "dependencies": {
+    "concurrently": "^10.0.4"
+  }
+}
