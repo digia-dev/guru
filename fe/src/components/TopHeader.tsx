@@ -93,28 +93,16 @@ export default function TopHeader() {
       </div>
 
       {/* Desktop header */}
-      <header className="glass sticky top-0 z-20 hidden lg:flex h-[72px] items-center justify-between px-8">
-        <div className="flex items-center gap-6 flex-1">
+      <header className="glass sticky top-0 z-20 hidden lg:flex h-[72px] items-center justify-center px-8">
+        <div className="flex items-center justify-center w-full max-w-lg">
           <button
             onClick={() => setSearchOpen(true)}
-            className="flex items-center gap-3 bg-surface-secondary hover:bg-surface-tertiary transition-colors rounded-2xl px-4 py-2.5 w-full max-w-md text-left"
+            className="flex items-center gap-3 bg-surface-secondary hover:bg-surface-tertiary transition-colors rounded-2xl px-4 py-2.5 w-full text-left"
           >
             <i className="fas fa-search text-text-tertiary text-sm"></i>
             <span className="text-sm text-text-tertiary">Cari siswa, kelas, atau menu...</span>
             <div className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg bg-white/50 border border-black/[0.06] text-[11px] text-text-tertiary font-medium">
               <i className="fab fa-apple"></i> K
-            </div>
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <NotificationBell />
-          <button onClick={() => navigate('/app/profile')} className="flex items-center gap-3 pl-4 ml-2 border-l border-black/[0.06] hover:opacity-80 transition-opacity">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
-              {user?.name?.charAt(0) || 'G'}
-            </div>
-            <div className="hidden xl:block text-left">
-              <p className="text-sm font-semibold">{user?.name || 'Guru'}</p>
-              <p className="text-[11px] text-text-tertiary">{isAdmin ? 'Admin' : 'Guru'}</p>
             </div>
           </button>
         </div>
