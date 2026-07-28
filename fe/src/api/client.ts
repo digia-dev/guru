@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase';
 
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ipvkqzpxstugemftmhem.supabase.co';
+
 const FUNCTIONS_MAP: Record<string, string> = {
   auth: 'auth', students: 'students', classes: 'classes', attendance: 'attendance',
   grades: 'grades', tabungan: 'tabungan', 'kas-umum': 'kas-umum', materi: 'materi',
@@ -8,25 +10,14 @@ const FUNCTIONS_MAP: Record<string, string> = {
 };
 
 let accessToken: string | null = null;
-let refreshToken: string | null = null;
 let onLogout: (() => void) | null = null;
-let asTeacherId: number | null = null;
 
-export function setAsTeacher(id: number | null) { asTeacherId = id; }
-export function getAsTeacher(): number | null { return asTeacherId; }
-
-export function setTokens(access: string, refresh: string) {
-  accessToken = access; refreshToken = refresh;
-  localStorage.setItem('refreshToken', refresh);
+export function setTokens(access: string) {
+  accessToken = access;
 }
 
 export function clearTokens() {
-  accessToken = null; refreshToken = null;
-  localStorage.removeItem('refreshToken');
-}
-
-export function getStoredRefreshToken(): string | null {
-  return refreshToken || localStorage.getItem('refreshToken');
+  accessToken = null;
 }
 
 export function setOnLogout(callback: () => void) { onLogout = callback; }
@@ -39,23 +30,25 @@ async function callFn(method: string, path: string, body?: any, params?: any) {
   const qs = params ? '?' + new URLSearchParams(params).toString() : '';
 
   const token = accessToken || (await supabase.auth.getSession()).data.session?.access_token;
-  const { data, error } = await supabase.functions.invoke(funcName, {
-    method: method as any,
-    body,
-    headers: {
-      Authorization: token ? `Bearer ${token}` : '',
-      'x-subpath': subPath + qs,
-      ...(asTeacherId ? { 'x-as-teacher': String(asTeacherId) } : {}),
-    },
+  const url = `${supabaseUrl}/functions/v1/${funcName}${subPath}${qs}`;
+
+  const headers: Record<string, string> = {
+    Authorization: token ? `Bearer ${token}` : '',
+  };
+
+  const res = await fetch(url, {
+    method,
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
   });
 
-  if (error) throw new Error(error.message);
-  if (data && data.success === false) {
-    const err = new Error(data.error || 'Request failed') as any;
-    err.response = { status: data.status || 400, data };
+  const data = await res.json();
+  if (!res.ok || data?.success === false) {
+    const err = new Error(data?.error || 'Request failed') as any;
+    err.response = { status: res.status, data };
     throw err;
   }
-  return { data, status: 200, statusText: 'OK', headers: {}, config: {} as any };
+  return { data, status: res.status, statusText: res.statusText, headers: {}, config: {} as any };
 }
 
 function createApiClient() {

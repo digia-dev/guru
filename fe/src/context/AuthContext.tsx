@@ -1,8 +1,10 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import apiClient, { setTokens, clearTokens, getStoredRefreshToken, setOnLogout } from '../api/client';
+import apiClient, { setTokens, clearTokens, setOnLogout } from '../api/client';
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ipvkqzpxstugemftmhem.supabase.co';
 
 interface AuthContextType {
   user: User | null;
@@ -25,10 +27,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const token = session.access_token;
-      const { data: fnData } = await supabase.functions.invoke('auth', {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${token}`, 'x-subpath': '/me' },
+      const res = await fetch(`${supabaseUrl}/functions/v1/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
+      const fnData = await res.json();
       if (fnData?.success) setUser(fnData.data);
     } catch { }
   }, []);
@@ -47,12 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const restoreSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        setTokens(session.access_token, session.refresh_token || '');
+        setTokens(session.access_token);
         try {
-          const { data: fnData } = await supabase.functions.invoke('auth', {
-            method: 'GET',
-            headers: { Authorization: `Bearer ${session.access_token}`, 'x-subpath': '/me' },
+          const res = await fetch(`${supabaseUrl}/functions/v1/auth/me`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
           });
+          const fnData = await res.json();
           if (fnData?.success) setUser(fnData.data);
         } catch { }
       }
@@ -62,13 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
-        setTokens(session.access_token, session.refresh_token || '');
+        setTokens(session.access_token);
         if (event === 'SIGNED_IN') {
           try {
-            const { data: fnData } = await supabase.functions.invoke('auth', {
-              method: 'GET',
-              headers: { Authorization: `Bearer ${session.access_token}`, 'x-subpath': '/me' },
+            const res = await fetch(`${supabaseUrl}/functions/v1/auth/me`, {
+              headers: { Authorization: `Bearer ${session.access_token}` },
             });
+            const fnData = await res.json();
             if (fnData?.success) setUser(fnData.data);
           } catch { }
         }
@@ -85,24 +87,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
     if (data.session) {
-      setTokens(data.session.access_token, data.session.refresh_token || '');
+      setTokens(data.session.access_token);
       try {
-        const { data: fnData } = await supabase.functions.invoke('auth', {
-          method: 'GET',
-          headers: { Authorization: `Bearer ${data.session.access_token}`, 'x-subpath': '/me' },
+        const res = await fetch(`${supabaseUrl}/functions/v1/auth/me`, {
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
         });
+        const fnData = await res.json();
         if (fnData?.success) setUser(fnData.data);
       } catch { }
     }
   };
 
   const register = async (email: string, password: string, name: string) => {
-    const { error } = await supabase.functions.invoke('auth', {
+    const res = await fetch(`${supabaseUrl}/functions/v1/auth/register`, {
       method: 'POST',
-      body: { email, password, name },
-      headers: { 'x-subpath': '/register' },
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, name }),
     });
-    if (error) throw error;
+    const data = await res.json();
+    if (!data?.success) throw new Error(data?.error || 'Registration failed');
   };
 
   return (
