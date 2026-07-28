@@ -34,7 +34,7 @@ async function callFn(method: string, path: string, body?: any, params?: any) {
   const [, group, ...rest] = cleanPath.split('/');
   const funcName = FUNCTIONS_MAP[group];
   if (!funcName) throw new Error(`Unknown API route: ${path}`);
-  const subPath = rest.length ? '/' + rest.join('/') : '';
+  const subPath = rest.length ? '/' + rest.join('/') : (group !== funcName ? '/' + group : '');
 
   const mergedParams = { ...Object.fromEntries(new URLSearchParams(qsFromPath).entries()), ...params };
   const qs = Object.keys(mergedParams).length ? '?' + new URLSearchParams(mergedParams).toString() : '';
