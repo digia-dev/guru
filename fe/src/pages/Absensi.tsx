@@ -141,7 +141,7 @@ export default function Absensi() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
         <div>
           <label className="label">Kelas</label>
           <div className="relative">

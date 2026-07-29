@@ -22,6 +22,7 @@ export default function TopHeader() {
     { page: 'settings', icon: 'fa-gear', label: 'Pengaturan', path: '/app/settings' },
     { page: 'profile', icon: 'fa-user', label: 'Profil', path: '/app/profile' },
   ] : [
+    { page: 'materi', icon: 'fa-book', label: 'Materi', path: '/app/materi' },
     { page: 'analisis-nilai', icon: 'fa-chart-simple', label: 'Analisis Nilai', path: '/app/analisis-nilai' },
     { page: 'data', icon: 'fa-users', label: 'Siswa', path: '/app/data' },
     { page: 'kalender', icon: 'fa-calendar-alt', label: 'Kalender', path: '/app/kalender' },
