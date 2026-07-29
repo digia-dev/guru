@@ -7,7 +7,7 @@ import clsx from 'clsx';
 const guruItems = [
   { page: 'dashboard', icon: 'fa-home', label: 'Beranda', path: '/app' },
   { page: 'absensi', icon: 'fa-user-check', label: 'Absensi', path: '/app/absensi' },
-  { page: 'materi', icon: 'fa-book', label: 'Materi', path: '/app/materi' },
+  { page: 'agenda', icon: 'fa-calendar-day', label: 'Agenda', path: '/app/agenda' },
   { page: 'nilai', icon: 'fa-star', label: 'Nilai', path: '/app/nilai' },
 ];
 
