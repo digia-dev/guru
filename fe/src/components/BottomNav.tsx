@@ -16,7 +16,6 @@ const adminItems = [
   { page: 'admin-users', icon: 'fa-users-gear', label: 'Pengguna', path: '/app/admin/users' },
   { page: 'admin-academic-years', icon: 'fa-calendar-plus', label: 'Tahun Ajaran', path: '/app/admin/academic-years' },
   { page: 'admin-subjects', icon: 'fa-book', label: 'Pelajaran', path: '/app/admin/subjects' },
-  { page: 'admin-announcements', icon: 'fa-bullhorn', label: 'Pengumuman', path: '/app/admin/announcements' },
 ];
 
 const guruActions = [
@@ -31,7 +30,6 @@ const adminActions = [
   { icon: 'fa-calendar-plus', label: 'Tahun Ajaran', path: '/app/admin/academic-years' },
   { icon: 'fa-book', label: 'Mata Pelajaran', path: '/app/admin/subjects' },
   { icon: 'fa-terminal', label: 'Aktivitas', path: '/app/admin/logs' },
-  { icon: 'fa-bullhorn', label: 'Pengumuman', path: '/app/admin/announcements' },
 ];
 
 export default function BottomNav() {
