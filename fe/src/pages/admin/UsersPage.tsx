@@ -95,8 +95,8 @@ export default function UsersPage() {
           <h1 className="page-title">Kelola Pengguna</h1>
           <p className="text-text-secondary mt-1">Tambah, edit, dan hapus akun guru</p>
         </div>
-        <button onClick={() => { setEditUser(null); setForm({ email: '', password: '', name: '', role: 'guru', teacher_classes: '', teacher_subjects: '' }); setShowForm(true); }} className="btn-primary">
-          <i className="fas fa-plus mr-2"></i>Tambah Guru
+        <button onClick={() => { setEditUser(null); setForm({ email: '', password: '', name: '', role: 'guru', teacher_classes: '', teacher_subjects: '' }); setShowForm(true); }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-500 text-white shadow-sm hover:shadow-md active:scale-[0.97] transition-all">
+          <i className="fas fa-plus mr-1.5"></i>Tambah Guru
         </button>
       </div>
 
@@ -153,8 +153,8 @@ export default function UsersPage() {
               </div>
             </div>
             <div className="flex gap-3">
-              <button type="submit" className="btn-primary" disabled={saving}>{saving ? <><i className="fas fa-spinner fa-spin mr-2"></i>Menyimpan...</> : (editUser ? 'Simpan' : 'Tambah')}</button>
-              <button type="button" onClick={() => { setShowForm(false); setEditUser(null); setError(''); }} className="btn-secondary" disabled={saving}>Batal</button>
+              <button type="submit" className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-500 text-white shadow-sm hover:shadow-md active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled={saving}>{saving ? <><i className="fas fa-spinner fa-spin mr-1.5"></i>Menyimpan...</> : (editUser ? 'Simpan' : 'Tambah')}</button>
+              <button type="button" onClick={() => { setShowForm(false); setEditUser(null); setError(''); }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled={saving}>Batal</button>
             </div>
           </form>
         </Card>

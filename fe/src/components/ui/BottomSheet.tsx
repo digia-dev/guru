@@ -16,10 +16,19 @@ export default function BottomSheet({ open, onClose, children, title }: BottomSh
   }, [open]);
 
   return (
-    <div className={clsx('fixed inset-0 z-50 lg:hidden', open ? 'visible' : 'invisible')}>
-      <div className={clsx('absolute inset-0 bg-black/30 backdrop-blur-sm', open ? 'animate-fade-in' : 'opacity-0')} onClick={onClose} />
+    <div className={clsx(
+      'fixed inset-0 z-50 lg:hidden transition-all duration-300 ease-out',
+      open ? 'visible opacity-100' : 'invisible opacity-0 pointer-events-none'
+    )}>
+      <div
+        className={clsx(
+          'absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-300 ease-out',
+          open ? 'opacity-100' : 'opacity-0'
+        )}
+        onClick={onClose}
+      />
       <div className={clsx(
-        'fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] max-h-[85vh] flex flex-col overflow-hidden transition-transform duration-300',
+        'fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] max-h-[85vh] flex flex-col overflow-hidden transition-transform duration-300 ease-out',
         open ? 'translate-y-0' : 'translate-y-full'
       )}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.06] flex-shrink-0">

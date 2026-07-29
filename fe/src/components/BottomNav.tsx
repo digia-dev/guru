@@ -47,27 +47,34 @@ export default function BottomNav() {
 
   return (
     <>
-      {actionOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setActionOpen(false)}>
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-fade-in" />
-          <div className="absolute bottom-20 left-4 right-4 bg-white rounded-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] overflow-hidden animate-fade-in-up">
-            <div className="p-2">
-              {actions.map((action) => (
-                <button
-                  key={action.label}
-                  onClick={() => { navigate(action.path); setActionOpen(false); }}
-                  className="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl hover:bg-surface-secondary transition-colors text-left"
-                >
-                  <div className="w-10 h-10 rounded-2xl bg-soft-purple flex items-center justify-center">
-                    <i className={`fas ${action.icon} text-primary`}></i>
-                  </div>
-                  <span className="font-medium text-sm">{action.label}</span>
-                </button>
-              ))}
-            </div>
+      <div className={clsx(
+        'fixed inset-0 z-40 lg:hidden transition-all duration-300 ease-out',
+        actionOpen ? 'visible opacity-100' : 'invisible opacity-0 pointer-events-none'
+      )} onClick={() => setActionOpen(false)}>
+        <div className={clsx(
+          'absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-300 ease-out',
+          actionOpen ? 'opacity-100' : 'opacity-0'
+        )} />
+        <div className={clsx(
+          'absolute bottom-20 left-4 right-4 bg-white rounded-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] overflow-hidden transition-all duration-300 ease-out',
+          actionOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-95'
+        )}>
+          <div className="p-2">
+            {actions.map((action) => (
+              <button
+                key={action.label}
+                onClick={() => { navigate(action.path); setActionOpen(false); }}
+                className="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl hover:bg-surface-secondary transition-colors text-left"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-soft-purple flex items-center justify-center">
+                  <i className={`fas ${action.icon} text-primary`}></i>
+                </div>
+                <span className="font-medium text-sm">{action.label}</span>
+              </button>
+            ))}
           </div>
         </div>
-      )}
+      </div>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-black/[0.06] z-30 lg:hidden safe-area-bottom">
         <div className="flex items-center justify-around h-16 px-2 relative">

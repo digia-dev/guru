@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../api/client';
 import toast from 'react-hot-toast';
@@ -434,10 +434,6 @@ export default function Data() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="page-title">Data</h1>
-          <p className="text-text-secondary text-sm mt-1">Kelola data siswa, tabungan, materi, dan kelas</p>
-        </div>
         <div className="flex items-center gap-2">
           <div className="relative">
             <select value={selectedClass || ''} onChange={e => setSelectedClass(e.target.value)} className="select-field pr-8 min-w-[120px]">

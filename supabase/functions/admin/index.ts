@@ -9,11 +9,33 @@ Deno.serve(async (req) => {
   const { data: { user }, error: authErr } = await supabase.auth.getUser(req.headers.get('Authorization')?.replace('Bearer ', '') || '');
   if (authErr || !user) return json({ success: false, error: 'Unauthorized' }, 401);
   const { data: appUser } = await supabase.from('users').select('*').eq('auth_user_id', user.id).single();
-  if (!appUser || appUser.role !== 'admin') return json({ success: false, error: 'Forbidden' }, 403);
-  const path = getPath(req);
+  if (!appUser) return json({ success: false, error: 'User not found' }, 401);
+  const path = getPath(req).split('?')[0].replace(/\/+$/, '') || '/';
   const id = getSearchParams(req).get('id') || getLastPathSegment(req);
+  const isAdmin = appUser.role === 'admin';
 
   try {
+    // Subjects (accessible by all authenticated users)
+    if (path === '/subjects' && method === 'GET') {
+      const { data } = await supabase.from('subjects').select('*').order('name');
+      return json({ success: true, data: data || [] });
+    }
+
+    // Academic Years (accessible by all authenticated users)
+    if (path === '/academic-years' && method === 'GET') {
+      const { data } = await supabase.from('academic_years').select('*').order('start_date', { ascending: false });
+      return json({ success: true, data: data || [] });
+    }
+
+    // Semesters (accessible by all authenticated users)
+    if (path === '/semesters' && method === 'GET') {
+      const { data } = await supabase.from('semesters').select('*').order('start_date');
+      return json({ success: true, data: data || [] });
+    }
+
+    // ── Admin-only endpoints below ──
+    if (!isAdmin) return json({ success: false, error: 'Forbidden' }, 403);
+
     // Users CRUD
     if (path === '/users' && method === 'GET') {
       const { data } = await supabase.from('users').select('id, email, name, role, teacher_classes, teacher_subjects, created_at').order('name');
@@ -70,12 +92,12 @@ Deno.serve(async (req) => {
         supabase.from('tabungan').select('uang_masuk, uang_keluar'),
         supabase.from('users').select('id', { count: 'exact', head: true }),
         supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'guru'),
-        supabase.rpc('exec_sql', { query_text: 'SELECT al.*, u.name as user_name FROM activity_logs al JOIN users u ON u.id = al.user_id ORDER BY al.created_at DESC LIMIT 20', query_params: '[]' }),
+        supabase.rpc('exec_sql', { sql_query: 'SELECT al.*, u.name as user_name FROM activity_logs al JOIN users u ON u.id = al.user_id ORDER BY al.created_at DESC LIMIT 20' }),
       ]);
       const classes = [...new Set((clsQ.data || []).map(r => r.class))];
       const totalTab = (tabQ.data || []).reduce((a, r) => a + parseFloat(r.uang_masuk || 0) - parseFloat(r.uang_keluar || 0), 0);
-      const { data: teachers } = await supabase.rpc('exec_sql', { query_text: 'SELECT u.id, u.name, u.email, COUNT(s.id) as student_count FROM users u LEFT JOIN students s ON s.teacher_id = u.id WHERE u.role = \'guru\' GROUP BY u.id, u.name, u.email ORDER BY u.name', query_params: '[]' });
-      return json({ success: true, data: { total_users: usrQ.count || 0, total_gurus: guruQ.count || 0, total_students: stQ.count || 0, total_classes: classes.length, hadir_hari_ini: attQ.count || 0, total_tabungan: totalTab, teachers: teachers?.rows || [], recent_logs: logQ?.rows || [] } });
+      const { data: teachers } = await supabase.rpc('exec_sql', { sql_query: 'SELECT u.id, u.name, u.email, COUNT(s.id) as student_count FROM users u LEFT JOIN students s ON s.teacher_id = u.id WHERE u.role = \'guru\' GROUP BY u.id, u.name, u.email ORDER BY u.name' });
+      return json({ success: true, data: { total_users: usrQ.count || 0, total_gurus: guruQ.count || 0, total_students: stQ.count || 0, total_classes: classes.length, hadir_hari_ini: attQ.count || 0, total_tabungan: totalTab, teachers: teachers || [], recent_logs: logQ?.data || [] } });
     }
 
     // Logs
@@ -83,16 +105,11 @@ Deno.serve(async (req) => {
       const page = parseInt(getSearchParams(req).get('page') || '1');
       const limit = Math.min(parseInt(getSearchParams(req).get('limit') || '50'), 200);
       const offset = (page - 1) * limit;
-      const { data: logs, count } = await supabase.rpc('exec_sql', { query_text: `SELECT al.*, u.name as user_name, u.email as user_email FROM activity_logs al JOIN users u ON u.id = al.user_id ORDER BY al.created_at DESC LIMIT ${limit} OFFSET ${offset}`, query_params: '[]' });
-      return json({ success: true, data: logs?.rows || [], pagination: { page, limit, total: count || 0, totalPages: Math.ceil((count || 0) / limit) } });
+      const { data: logs } = await supabase.rpc('exec_sql', { sql_query: `SELECT al.*, u.name as user_name, u.email as user_email FROM activity_logs al JOIN users u ON u.id = al.user_id ORDER BY al.created_at DESC LIMIT ${limit} OFFSET ${offset}` });
+      return json({ success: true, data: logs || [], pagination: { page, limit, total: 0, totalPages: 0 } });
     }
 
-    // Subjects
-    if (path === '/subjects' && method === 'GET') {
-      const { data } = await supabase.from('subjects').select('*').order('name');
-      return json({ success: true, data: data || [] });
-    }
-
+    // Subjects CRUD (admin only)
     if (path === '/subjects' && method === 'POST') {
       const body = await req.json();
       const { data, error } = await supabase.from('subjects').insert(body).select().single();
@@ -112,12 +129,7 @@ Deno.serve(async (req) => {
       return json({ success: true, message: 'Subject deleted' });
     }
 
-    // Academic Years
-    if (path === '/academic-years' && method === 'GET') {
-      const { data } = await supabase.from('academic_years').select('*').order('start_date', { ascending: false });
-      return json({ success: true, data: data || [] });
-    }
-
+    // Academic Years CRUD (admin only)
     if (path === '/academic-years' && method === 'POST') {
       const body = await req.json();
       const { data, error } = await supabase.from('academic_years').insert(body).select().single();
@@ -137,12 +149,7 @@ Deno.serve(async (req) => {
       return json({ success: true, message: 'Academic year deleted' });
     }
 
-    // Semesters
-    if (path === '/semesters' && method === 'GET') {
-      const { data } = await supabase.from('semesters').select('*').order('start_date');
-      return json({ success: true, data: data || [] });
-    }
-
+    // Semesters CRUD (admin only)
     if (path === '/semesters' && method === 'POST') {
       const body = await req.json();
       const { data, error } = await supabase.from('semesters').insert(body).select().single();

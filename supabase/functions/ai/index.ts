@@ -1,35 +1,30 @@
 import { corsHeaders, handleCors, getPath } from '../_shared/cors.ts';
 
-const GEMINI_KEY = Deno.env.get('GEMINI_API_KEY') || '';
+const OR_KEY = Deno.env.get('OPENROUTER_API_KEY') || '';
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
-async function callGemini(prompt: string): Promise<string> {
-  if (!GEMINI_KEY) {
-    const templates: Record<string, string> = {
-      'ringkasan': `**Ringkasan Siswa**
-Berdasarkan data yang tersedia, siswa ini menunjukkan perkembangan yang perlu diperhatikan lebih lanjut. Disarankan untuk melakukan pemantauan rutin terhadap kehadiran dan nilai akademik.`,
-      'catatan': `Catatan Rapor:
-Siswa menunjukkan partisipasi yang cukup baik dalam kegiatan pembelajaran. Perlu ditingkatkan lagi kedisiplinan dan ketekunan dalam mengerjakan tugas-tugas sekolah.`,
-      'ide': `**Ide Kegiatan Pembelajaran:**
-1. Diskusi kelompok interaktif
-2. Praktik langsung (hands-on)
-3. Permainan edukatif
-4. Proyek berbasis masalah`,
-    };
-    if (prompt.includes('ringkasan')) return templates.ringkasan;
-    if (prompt.includes('catatan rapor')) return templates.catatan;
-    return templates.ide;
+async function callOpenRouter(prompt: string): Promise<string> {
+  if (!OR_KEY) {
+    return 'AI tidak aktif — atur OPENROUTER_API_KEY di Supabase secrets.';
   }
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OR_KEY}`,
+      'HTTP-Referer': 'https://appguru.vercel.app',
+      'X-Title': 'AppGuru',
+    },
+    body: JSON.stringify({
+      model: 'openai/gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+    }),
   });
   const data = await res.json();
-  return data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Tidak dapat menghasilkan respon.';
+  return data?.choices?.[0]?.message?.content || 'Tidak dapat menghasilkan respon.';
 }
 
 Deno.serve(async (req) => {
@@ -48,7 +43,7 @@ Deno.serve(async (req) => {
 Data: Nilai Pengetahuan=${pRata ?? '-'}, Keterampilan=${kRata ?? '-'}, Sikap=${sRata ?? '-'}, 
 Kehadiran: Hadir=${hadir}, Sakit=${sakit}, Izin=${izin}, Alfa=${alfa} dari ${totalHadir} pertemuan.
 Tabungan=${tabungan}. Berikan 2-3 kalimat evaluasi dan saran.`;
-      const text = await callGemini(prompt);
+      const text = await callOpenRouter(prompt);
       return json({ success: true, data: text });
     }
 
@@ -57,14 +52,14 @@ Tabungan=${tabungan}. Berikan 2-3 kalimat evaluasi dan saran.`;
       const prompt = `Buat catatan rapor untuk ${name} dalam bahasa Indonesia (2 kalimat).
 Nilai: Pengetahuan=${pRata ?? '-'}, Keterampilan=${kRata ?? '-'}, Sikap=${sRata ?? '-'}.
 Kehadiran=${hadir}/${totalHadir}.`;
-      const text = await callGemini(prompt);
+      const text = await callOpenRouter(prompt);
       return json({ success: true, data: text });
     }
 
     if (path === '/activity-ideas') {
       const { class: cls, date } = body;
       const prompt = `Berikan 3 ide kegiatan pembelajaran menarik untuk kelas ${cls} pada tanggal ${date} dalam bahasa Indonesia.`;
-      const text = await callGemini(prompt);
+      const text = await callOpenRouter(prompt);
       return json({ success: true, data: text });
     }
 

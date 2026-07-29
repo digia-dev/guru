@@ -22,6 +22,7 @@ export default function TopHeader() {
     { page: 'settings', icon: 'fa-gear', label: 'Pengaturan', path: '/app/settings' },
     { page: 'profile', icon: 'fa-user', label: 'Profil', path: '/app/profile' },
   ] : [
+    { page: 'analisis-nilai', icon: 'fa-chart-simple', label: 'Analisis Nilai', path: '/app/analisis-nilai' },
     { page: 'data', icon: 'fa-users', label: 'Siswa', path: '/app/data' },
     { page: 'kalender', icon: 'fa-calendar-alt', label: 'Kalender', path: '/app/kalender' },
     { page: 'penilaian-semester', icon: 'fa-chart-line', label: 'Nilai Semester', path: '/app/penilaian-semester' },
@@ -57,8 +58,17 @@ export default function TopHeader() {
       </header>
 
       {/* Mobile menu drawer */}
-      <div className={clsx('fixed inset-0 z-50 lg:hidden', menuOpen ? 'visible' : 'invisible')}>
-        <div className={clsx('absolute inset-0 bg-black/30 backdrop-blur-sm', menuOpen ? 'animate-fade-in' : 'opacity-0')} onClick={() => setMenuOpen(false)} />
+      <div className={clsx(
+        'fixed inset-0 z-50 lg:hidden transition-all duration-300 ease-out',
+        menuOpen ? 'visible opacity-100' : 'invisible opacity-0 pointer-events-none'
+      )}>
+        <div
+          className={clsx(
+            'absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-300 ease-out',
+            menuOpen ? 'opacity-100' : 'opacity-0'
+          )}
+          onClick={() => setMenuOpen(false)}
+        />
         <div className={clsx(
           'fixed top-0 left-0 bottom-0 w-72 bg-white shadow-2xl transition-transform duration-300',
           menuOpen ? 'translate-x-0' : '-translate-x-full'

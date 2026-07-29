@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+﻿import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useImpersonation } from '../context/ImpersonationContext';
 import Card from '../components/ui/Card';
@@ -21,10 +21,6 @@ export default function Profile() {
 
   return (
     <div className="max-w-lg mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="page-title">Profil</h1>
-        <p className="text-text-secondary mt-1">Informasi akun Anda</p>
-      </div>
 
       <Card>
           <div className="flex flex-col items-center py-6">

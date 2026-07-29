@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
+import clsx from 'clsx';
 
 interface ModalProps {
   isOpen: boolean;
@@ -14,12 +15,22 @@ export function DesktopModal({ isOpen, onClose, title, children }: ModalProps) {
     return () => document.removeEventListener('keydown', handleEsc);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 hidden md:flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden animate-fade-in">
+    <div className={clsx(
+      'fixed inset-0 z-50 hidden md:flex items-center justify-center p-4 transition-all duration-300 ease-out',
+      isOpen ? 'visible opacity-100' : 'invisible opacity-0 pointer-events-none'
+    )}>
+      <div
+        className={clsx(
+          'absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ease-out',
+          isOpen ? 'opacity-100' : 'opacity-0'
+        )}
+        onClick={onClose}
+      />
+      <div className={clsx(
+        'relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden transition-all duration-300 ease-out',
+        isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
+      )}>
         <div className="flex justify-between items-center p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-t-2xl">
           <h3 className="text-lg font-semibold text-indigo-800">{title}</h3>
           <button onClick={onClose} className="p-3 rounded-full hover:bg-indigo-100 text-indigo-600">
@@ -42,7 +53,7 @@ export function MobileModal({ isOpen, onClose, title, children }: ModalProps) {
   return (
     <>
       <div
-        className={`fixed inset-0 z-40 md:hidden transition-opacity ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
+        className={`fixed inset-0 z-40 md:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100 visible bg-black/30 backdrop-blur-sm' : 'opacity-0 invisible'}`}
         onClick={onClose}
       />
       <div className={`slide-up-modal md:hidden ${isOpen ? 'active' : ''}`}>

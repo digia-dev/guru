@@ -129,32 +129,31 @@ export default function AdminDashboard() {
         </Card>
 
         <Card>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="section-title">Aktivitas Terbaru</h2>
-              <p className="text-xs text-text-tertiary mt-0.5">20 aktivitas terakhir</p>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+              </div>
+              <span className="text-[11px] font-mono text-text-tertiary">aktivitas.log</span>
             </div>
-            <button onClick={() => navigate('/app/admin/logs')} className="text-xs text-primary font-medium hover:underline">Lihat semua <i className="fas fa-arrow-right ml-1"></i></button>
+            <button onClick={() => navigate('/app/admin/logs')} className="text-[11px] font-mono text-primary hover:underline">cat <i className="fas fa-arrow-right ml-1"></i></button>
           </div>
-          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+          <div className="font-mono text-[12px] leading-relaxed space-y-1 max-h-[400px] overflow-y-auto">
             {data?.recent_logs?.map((log) => (
-              <div key={log.id} className="flex items-start gap-3 p-2.5 rounded-xl bg-surface-secondary text-xs">
-                <div className="flex-shrink-0 w-6 h-6 rounded-lg bg-black/5 flex items-center justify-center text-[10px] font-bold">
-                  {log.user_name?.charAt(0) || '?'}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium truncate">{log.user_name}</p>
-                  <p className="text-text-tertiary mt-0.5">
-                    {log.action} {log.entity_type}{log.entity_id ? ` #${log.entity_id}` : ''}
-                  </p>
-                  <p className="text-[10px] text-text-tertiary mt-0.5">
-                    {new Date(log.created_at).toLocaleString('id-ID')}
-                  </p>
-                </div>
+              <div key={log.id} className="flex items-start gap-2 px-1 py-1 hover:bg-surface-secondary rounded-lg transition-colors">
+                <span className="text-text-tertiary select-none shrink-0">$</span>
+                <span className="text-text-tertiary shrink-0 whitespace-nowrap">[{new Date(log.created_at).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit' })}]</span>
+                <span className="text-primary font-semibold shrink-0">{log.user_name}</span>
+                <span className="text-text-primary">{log.action} {log.entity_type}{log.entity_id ? ` #${log.entity_id}` : ''}</span>
               </div>
             ))}
             {(!data?.recent_logs || data.recent_logs.length === 0) && (
-              <p className="text-sm text-text-tertiary text-center py-4">Belum ada aktivitas</p>
+              <div className="text-center py-8 text-text-tertiary">
+                <p className="font-mono text-xs">tidak ada aktivitas</p>
+                <p className="font-mono text-[10px] mt-1">~$ _</p>
+              </div>
             )}
           </div>
         </Card>

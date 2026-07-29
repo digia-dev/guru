@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+﻿import { useState, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as XLSX from 'xlsx';
 import apiClient from '../api/client';
@@ -225,7 +225,7 @@ function ExportImportTab() {
         </div>
         <span className="text-xs text-text-tertiary">Rentang tabungan:</span>
         <input type="date" value={exportStart} onChange={e => setExportStart(e.target.value)} className="input-field w-32 text-xs" />
-        <span className="text-text-tertiary">—</span>
+        <span className="text-text-tertiary">â€”</span>
         <input type="date" value={exportEnd} onChange={e => setExportEnd(e.target.value)} className="input-field w-32 text-xs" />
       </div>
 
@@ -352,10 +352,6 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="page-title">Pengaturan</h1>
-        <p className="text-text-secondary text-sm mt-1">Ekspor & impor data, kelola profil</p>
-      </div>
 
       <div className="flex gap-1 bg-white rounded-2xl p-1.5 border border-black/[0.06] overflow-x-auto">
         {[

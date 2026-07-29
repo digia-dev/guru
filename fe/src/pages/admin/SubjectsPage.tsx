@@ -57,8 +57,8 @@ export default function SubjectsPage() {
           <h1 className="page-title">Mata Pelajaran</h1>
           <p className="text-text-secondary mt-1">Atur daftar mata pelajaran</p>
         </div>
-        <button onClick={() => { setEditSubject(null); setForm({ name: '', code: '', description: '' }); setShowForm(true); }} className="btn-primary">
-          <i className="fas fa-plus mr-2"></i>Tambah
+        <button onClick={() => { setEditSubject(null); setForm({ name: '', code: '', description: '' }); setShowForm(true); }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-500 text-white shadow-sm hover:shadow-md active:scale-[0.97] transition-all">
+          <i className="fas fa-plus mr-1.5"></i>Tambah
         </button>
       </div>
 
@@ -82,8 +82,8 @@ export default function SubjectsPage() {
               </div>
             </div>
             <div className="flex gap-3">
-              <button type="submit" className="btn-primary">{editSubject ? 'Simpan' : 'Tambah'}</button>
-              <button type="button" onClick={() => { setShowForm(false); setEditSubject(null); }} className="btn-secondary">Batal</button>
+              <button type="submit" className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-500 text-white shadow-sm hover:shadow-md active:scale-[0.97] transition-all">{editSubject ? 'Simpan' : 'Tambah'}</button>
+              <button type="button" onClick={() => { setShowForm(false); setEditSubject(null); }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-all">Batal</button>
             </div>
           </form>
         </Card>

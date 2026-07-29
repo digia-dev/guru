@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
@@ -119,10 +119,6 @@ export default function Nilai() {
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="page-title">Penilaian Harian</h1>
-          <p className="text-text-secondary text-sm mt-1">Input nilai tugas dan ulangan harian</p>
-        </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" icon="fa-chart-line" onClick={() => navigate('/app/penilaian-semester')}>Nilai Semester</Button>
         </div>

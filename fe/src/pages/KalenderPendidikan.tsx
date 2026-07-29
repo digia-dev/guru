@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+﻿import { useRef, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../api/client';
 import toast from 'react-hot-toast';
@@ -174,10 +174,6 @@ export default function KalenderPendidikan() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="page-title">Kalender Pendidikan</h1>
-          <p className="text-text-secondary text-sm mt-1">Tahun Pelajaran {CALENDAR_DATA.kalenderAkademik.info.tahunPelajaran}</p>
-        </div>
         <div className="flex gap-1">
           <button onClick={downloadTemplate} className="px-2.5 py-2 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-colors" title="Download Template"><i className="fas fa-download mr-1"></i>Template</button>
           <button onClick={exportKalender} className="px-2.5 py-2 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-colors" title="Export Excel"><i className="fas fa-file-export mr-1"></i>Export</button>

@@ -16,6 +16,7 @@ const Agenda = lazy(() => import('./pages/Agenda'));
 const Absensi = lazy(() => import('./pages/Absensi'));
 const Nilai = lazy(() => import('./pages/Nilai'));
 const PenilaianSemester = lazy(() => import('./pages/PenilaianSemester'));
+const AnalisisNilai = lazy(() => import('./pages/AnalisisNilai'));
 const Data = lazy(() => import('./pages/Data'));
 const KalenderPendidikan = lazy(() => import('./pages/KalenderPendidikan'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -69,6 +70,7 @@ export default function App() {
         <Route path="absensi" element={<Suspense fallback={<SuspenseFallback />}><Absensi /></Suspense>} />
         <Route path="nilai" element={<Suspense fallback={<SuspenseFallback />}><Nilai /></Suspense>} />
         <Route path="penilaian-semester" element={<Suspense fallback={<SuspenseFallback />}><PenilaianSemester /></Suspense>} />
+        <Route path="analisis-nilai" element={<Suspense fallback={<SuspenseFallback />}><AnalisisNilai /></Suspense>} />
         <Route path="data" element={<Suspense fallback={<SuspenseFallback />}><Data /></Suspense>} />
         <Route path="kalender" element={<Suspense fallback={<SuspenseFallback />}><KalenderPendidikan /></Suspense>} />
         <Route path="settings" element={<Suspense fallback={<SuspenseFallback />}><Settings /></Suspense>} />

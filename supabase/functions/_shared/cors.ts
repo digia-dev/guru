@@ -17,7 +17,9 @@ export function getPath(req: Request): string {
 
 export function getSearchParams(req: Request): URLSearchParams {
   const subpath = getPath(req);
-  return new URLSearchParams(subpath.split('?')[1] || '');
+  const fromSubpath = new URLSearchParams(subpath.split('?')[1] || '');
+  if (fromSubpath.toString()) return fromSubpath;
+  return new URLSearchParams(new URL(req.url).search);
 }
 
 export function getLastPathSegment(req: Request): string {

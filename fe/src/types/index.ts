@@ -154,7 +154,19 @@ export interface Notification {
   created_at: string;
 }
 
-export type PageType = 'dashboard' | 'agenda' | 'absensi' | 'nilai' | 'penilaian-semester' | 'data' | 'kalender' | 'settings' | 'profile' | 'admin-dashboard' | 'admin-users' | 'admin-academic-years' | 'admin-semesters' | 'admin-subjects' | 'admin-logs';
+export interface TimetableEntry {
+  id: number;
+  teacher_id: number;
+  class: string;
+  subject_id: number | null;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  room: string;
+  subjects?: { name: string; code: string } | null;
+}
+
+export type PageType = 'dashboard' | 'agenda' | 'absensi' | 'nilai' | 'penilaian-semester' | 'jadwal-pelajaran' | 'data' | 'kalender' | 'settings' | 'profile' | 'admin-dashboard' | 'admin-users' | 'admin-academic-years' | 'admin-semesters' | 'admin-subjects' | 'admin-logs';
 
 export interface AcademicYear {
   id: number;

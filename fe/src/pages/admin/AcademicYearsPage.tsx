@@ -111,8 +111,8 @@ export default function AcademicYearsPage() {
               <input type="date" value={yearForm.start_date} onChange={e => setYearForm({ ...yearForm, start_date: e.target.value })} className="input-field" required />
               <input type="date" value={yearForm.end_date} onChange={e => setYearForm({ ...yearForm, end_date: e.target.value })} className="input-field" required />
               <div className="flex gap-2">
-                <button type="submit" className="btn-primary text-xs">{editYear ? 'Simpan' : 'Tambah'}</button>
-                <button type="button" onClick={() => { setShowYearForm(false); setEditYear(null); }} className="btn-secondary text-xs">Batal</button>
+                <button type="submit" className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-500 text-white shadow-sm hover:shadow-md active:scale-[0.97] transition-all">{editYear ? 'Simpan' : 'Tambah'}</button>
+                <button type="button" onClick={() => { setShowYearForm(false); setEditYear(null); }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-all">Batal</button>
               </div>
             </form>
           )}
@@ -153,8 +153,8 @@ export default function AcademicYearsPage() {
               <input type="date" value={semForm.start_date} onChange={e => setSemForm({ ...semForm, start_date: e.target.value })} className="input-field" required />
               <input type="date" value={semForm.end_date} onChange={e => setSemForm({ ...semForm, end_date: e.target.value })} className="input-field" required />
               <div className="flex gap-2">
-                <button type="submit" className="btn-primary text-xs">{editSem ? 'Simpan' : 'Tambah'}</button>
-                <button type="button" onClick={() => { setShowSemForm(false); setEditSem(null); }} className="btn-secondary text-xs">Batal</button>
+                <button type="submit" className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-500 text-white shadow-sm hover:shadow-md active:scale-[0.97] transition-all">{editSem ? 'Simpan' : 'Tambah'}</button>
+                <button type="button" onClick={() => { setShowSemForm(false); setEditSem(null); }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-all">Batal</button>
               </div>
             </form>
           )}

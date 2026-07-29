@@ -128,19 +128,6 @@ export default function Absensi() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="page-title">Absensi</h1>
-          <p className="text-text-secondary text-sm mt-1">Catat kehadiran siswa hari ini</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" icon="fa-user-plus" onClick={() => setShowAddStudent(!showAddStudent)}>
-            Tambah Siswa
-          </Button>
-        </div>
-      </div>
-
       {/* Filters */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
@@ -172,20 +159,6 @@ export default function Absensi() {
           <input type="date" value={selectedDate} onChange={(e) => { setSelectedDate(e.target.value); setChanges(new Map()); }} className="input-field" />
         </div>
       </div>
-
-      {/* Add Student */}
-      {showAddStudent && (
-        <Card className="animate-fade-in-up">
-          <h3 className="font-semibold text-sm mb-3">Tambah Siswa Baru</h3>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input type="text" placeholder="NIS" value={newStudentId} onChange={e => setNewStudentId(e.target.value)} className="input-field flex-1" />
-            <input type="text" placeholder="Nama Lengkap" value={newStudentName} onChange={e => setNewStudentName(e.target.value)} className="input-field flex-1" />
-            <Button onClick={() => addStudentMutation.mutate()} disabled={addStudentMutation.isPending || !newStudentId || !newStudentName} loading={addStudentMutation.isPending}>
-              Simpan
-            </Button>
-          </div>
-        </Card>
-      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-5 gap-2">

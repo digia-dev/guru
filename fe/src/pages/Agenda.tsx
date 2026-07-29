@@ -9,6 +9,7 @@ import { useClasses } from '../hooks/useClasses';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import clsx from 'clsx';
 
 const CLASS_PALETTE = [
   { bg: 'bg-rose-100 text-rose-700 border-l-rose-400', dot: 'bg-rose-400' },
@@ -61,12 +62,19 @@ function AgendaModal({ isOpen, onClose, activity, currentDate, teacherClasses, t
     onError: () => toast.error('Gagal menghapus jadwal'),
   });
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full animate-scale-in" onClick={e => e.stopPropagation()}>
+    <div className={clsx(
+      'fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out',
+      isOpen ? 'visible opacity-100' : 'invisible opacity-0 pointer-events-none'
+    )} onClick={onClose}>
+      <div className={clsx(
+        'absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-300 ease-out',
+        isOpen ? 'opacity-100' : 'opacity-0'
+      )} />
+      <div className={clsx(
+        'relative bg-white rounded-3xl shadow-2xl max-w-md w-full transition-all duration-300 ease-out',
+        isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+      )} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.06]">
           <h3 className="text-lg font-semibold">{activity ? 'Edit Jadwal' : 'Tambah Jadwal Baru'}</h3>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5"><i className="fas fa-times text-text-tertiary"></i></button>
@@ -194,10 +202,6 @@ export default function Agenda() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="page-title">Agenda</h1>
-          <p className="text-text-secondary text-sm mt-1">Kelola jadwal pembelajaran mingguan</p>
-        </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" icon="fa-calendar-alt" onClick={() => navigate('/app/kalender')}>Kalender</Button>
           <Button variant="secondary" size="sm" icon="fa-copy" onClick={() => duplicateMutation.mutate()}>Duplikasi</Button>
@@ -209,19 +213,19 @@ export default function Agenda() {
       <Card>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={handlePrevWeek} className="w-10 h-10 rounded-2xl hover:bg-surface-secondary flex items-center justify-center transition-colors">
-              <i className="fas fa-chevron-left text-text-secondary"></i>
+            <button onClick={handlePrevWeek} className="w-8 h-8 rounded-xl hover:bg-surface-secondary flex items-center justify-center transition-colors">
+              <i className="fas fa-chevron-left text-text-secondary text-sm"></i>
             </button>
-            <h2 className="font-[650] text-lg min-w-[200px] text-center">
+            <h2 className="font-[650] text-sm min-w-[140px] text-center">
               {weekRange.startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
               {' — '}
               {weekRange.endDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
             </h2>
-            <button onClick={handleNextWeek} className="w-10 h-10 rounded-2xl hover:bg-surface-secondary flex items-center justify-center transition-colors">
-              <i className="fas fa-chevron-right text-text-secondary"></i>
+            <button onClick={handleNextWeek} className="w-8 h-8 rounded-xl hover:bg-surface-secondary flex items-center justify-center transition-colors">
+              <i className="fas fa-chevron-right text-text-secondary text-sm"></i>
             </button>
           </div>
-          <button onClick={handleToday} className="btn-secondary text-sm px-4 py-2">Hari ini</button>
+          <button onClick={handleToday} className="btn-secondary text-xs px-3 py-1.5">Hari ini</button>
         </div>
       </Card>
 
@@ -230,10 +234,10 @@ export default function Agenda() {
         <div className="overflow-auto" ref={scrollRef}>
           <div className="flex" style={{ minWidth: 700 }}>
             {/* Time column */}
-            <div className="flex-shrink-0 w-16 sticky left-0 z-30 bg-white">
-              <div className="h-12" />
-              {Array.from({ length: 12 }, (_, i) => (
-                <div key={i} className="flex items-start justify-end pr-3 pt-1 text-[11px] text-text-tertiary h-[60px] border-b border-black/[0.04]">{i + 7}:00</div>
+            <div className="flex-shrink-0 w-12 sticky left-0 z-30 bg-white">
+              <div className="h-8" />
+              {Array.from({ length: 10 }, (_, i) => (
+                <div key={i} className="flex items-start justify-end pr-2 pt-0.5 text-[10px] text-text-tertiary h-10 border-b border-black/[0.04]">{i + 7}:00</div>
               ))}
             </div>
             {/* Days */}
@@ -242,14 +246,14 @@ export default function Agenda() {
                 {weekDates.map((d) => {
                   const isToday = d.toDateString() === todayStr;
                   return (
-                    <div key={d.toISOString()} className={`text-center py-3 border-l border-black/[0.04] ${isToday ? 'bg-soft-purple' : ''}`}>
-                      <div className="text-[11px] font-medium text-text-tertiary">{d.toLocaleDateString('id-ID', { weekday: 'short' })}</div>
-                      <div className={`text-xl font-bold mt-0.5 ${isToday ? 'text-primary' : 'text-text-primary'}`}>{d.getDate()}</div>
+                    <div key={d.toISOString()} className={`text-center py-1.5 border-l border-black/[0.04] ${isToday ? 'bg-soft-purple' : ''}`}>
+                      <div className="text-[10px] font-medium text-text-tertiary">{d.toLocaleDateString('id-ID', { weekday: 'short' })}</div>
+                      <div className={`text-sm font-semibold ${isToday ? 'text-primary' : 'text-text-primary'}`}>{d.getDate()}</div>
                     </div>
                   );
                 })}
               </div>
-              <div className="grid grid-cols-7 relative" style={{ height: 12 * 60 }}>
+              <div className="grid grid-cols-7 relative" style={{ height: 10 * 40 }}>
                 {weekDates.map((d) => {
                   const dateStr = formatDate(d);
                   const dayEvents = getEventsForDay(dateStr);
@@ -262,10 +266,10 @@ export default function Agenda() {
                         const height = Math.max(((eh - 7) * 60 + em) - top - 1, 20);
                         const colors = classColor(event.class);
                         return (
-                          <div key={event.id} onClick={() => openEditModal(event)} className={`absolute left-1 right-1 rounded-xl border-l-[3px] ${colors.bg} px-2.5 py-1.5 text-xs overflow-hidden cursor-pointer z-10 shadow-sm hover:shadow-md transition-shadow`} style={{ top: `${top}px`, height: `${height}px` }}>
-                            <span className="font-semibold">{event.class}</span>
-                            <p className="truncate opacity-75">{event.catatan || ''}</p>
-                            <span className="text-[10px] opacity-60">{event.waktu_mulai.slice(0, 5)}</span>
+                          <div key={event.id} onClick={() => openEditModal(event)} className={`absolute left-0.5 right-0.5 rounded-lg border-l-[3px] ${colors.bg} px-1.5 py-1 text-[10px] overflow-hidden cursor-pointer z-10 shadow-sm hover:shadow-md transition-shadow`} style={{ top: `${top}px`, height: `${height}px` }}>
+                            <span className="font-semibold text-[10px]">{event.class}</span>
+                            <p className="truncate opacity-75 leading-tight">{event.catatan || ''}</p>
+                            <span className="text-[8px] opacity-60">{event.waktu_mulai.slice(0, 5)}</span>
                           </div>
                         );
                       })}
@@ -274,7 +278,7 @@ export default function Agenda() {
                 })}
                 {/* Grid lines */}
                 <div className="absolute inset-0 pointer-events-none">
-                  {Array.from({ length: 12 }, (_, i) => <div key={i} className="border-b border-black/[0.04]" style={{ height: 60 }} />)}
+                  {Array.from({ length: 10 }, (_, i) => <div key={i} className="border-b border-black/[0.04]" style={{ height: 40 }} />)}
                 </div>
               </div>
             </div>

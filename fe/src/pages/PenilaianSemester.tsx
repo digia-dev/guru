@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
@@ -91,10 +91,6 @@ export default function PenilaianSemester() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="page-title">Nilai Semester</h1>
-          <p className="text-text-secondary text-sm mt-1">Kelola STS, SAS, dan nilai rapor</p>
-        </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" icon="fa-star" onClick={() => navigate('/app/nilai')}>Nilai Harian</Button>
         </div>
@@ -147,7 +143,7 @@ export default function PenilaianSemester() {
                 <tr className="bg-surface-secondary">
                   <th className="table-header sticky left-0 bg-surface-secondary z-10 min-w-[160px]">
                     Nama Siswa
-                    <span className="block text-[10px] font-normal text-text-tertiary mt-0.5">Rumus: (Harian×0.5)+(STS×0.1)+(SAS×0.2)+(Kehadiran×0.2)</span>
+                    <span className="block text-[10px] font-normal text-text-tertiary mt-0.5">Rumus: (HarianÃ—0.5)+(STSÃ—0.1)+(SASÃ—0.2)+(KehadiranÃ—0.2)</span>
                   </th>
                   <th className="table-header text-center w-24">Rata Harian</th>
                   <th className="table-header text-center w-24">Kehadiran</th>

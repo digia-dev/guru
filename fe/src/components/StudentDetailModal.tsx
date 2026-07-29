@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../api/client';
 import toast from 'react-hot-toast';
-import { DesktopModal, MobileModal } from './Modal';
+import clsx from 'clsx';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ipvkqzpxstugemftmhem.supabase.co';
 
 function StudentSummaryAI({ student, grade, attendance, tabungan }: { student: { id: number; name: string; class: string }; grade: any; attendance: { hadir: number; sakit: number; izin: number; alfa: number; total: number }; tabungan?: number }) {
   const [summary, setSummary] = useState('');
@@ -244,6 +246,23 @@ export default function StudentDetailModal({ isOpen, onClose, studentId }: Stude
                 attendance={activeSem.attendance}
               />
             </div>
+
+            <button
+              onClick={async () => {
+                try {
+                  const token = (await import('../lib/supabase').then(m => m.supabase.auth.getSession())).data.session?.access_token;
+                  const res = await fetch(`${supabaseUrl}/functions/v1/rapor?student_id=${student.id}&semester=${activeSemester}`, {
+                    headers: { Authorization: `Bearer ${token || ''}` },
+                  });
+                  const html = await res.text();
+                  const blob = new Blob([html], { type: 'text/html' });
+                  window.open(URL.createObjectURL(blob), '_blank');
+                } catch { toast.error('Gagal membuka rapor'); }
+              }}
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2"
+            >
+              <i className="fas fa-print"></i> Cetak Rapor Semester {activeSemester}
+            </button>
           </>
         )}
 
@@ -259,14 +278,42 @@ export default function StudentDetailModal({ isOpen, onClose, studentId }: Stude
     );
   };
 
+  useEffect(() => {
+    if (isOpen) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    if (isOpen) document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [isOpen, onClose]);
+
   return (
-    <>
-      <DesktopModal isOpen={isOpen} onClose={onClose} title="Detail Siswa">
-        {renderContent()}
-      </DesktopModal>
-      <MobileModal isOpen={isOpen} onClose={onClose} title="Detail Siswa">
-        {renderContent()}
-      </MobileModal>
-    </>
+    <div className={clsx(
+      'fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out',
+      isOpen ? 'visible opacity-100' : 'invisible opacity-0 pointer-events-none'
+    )}>
+      <div
+        className={clsx(
+          'absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-300 ease-out',
+          isOpen ? 'opacity-100' : 'opacity-0'
+        )}
+        onClick={onClose}
+      />
+      <div className={clsx(
+        'relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto transition-all duration-300 ease-out',
+        isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
+      )}>
+        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-white border-b border-black/[0.06] rounded-t-3xl">
+          <h3 className="text-lg font-semibold">Detail Siswa</h3>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5">
+            <i className="fas fa-times text-text-tertiary"></i>
+          </button>
+        </div>
+        <div className="p-6">{renderContent()}</div>
+      </div>
+    </div>
   );
 }

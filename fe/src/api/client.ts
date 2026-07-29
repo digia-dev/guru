@@ -8,6 +8,7 @@ const FUNCTIONS_MAP: Record<string, string> = {
   agenda: 'agenda', dashboard: 'dashboard', search: 'search', admin: 'admin',
   notifications: 'notifications', semesters: 'admin', 'calendar-events': 'calendar-events',
   subjects: 'admin', activities: 'agenda', 'academic-years': 'admin', logs: 'admin', ai: 'ai',
+  timetable: 'timetable', analytics: 'analytics', rapor: 'rapor',
 };
 
 let accessToken: string | null = null;

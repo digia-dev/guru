@@ -28,9 +28,12 @@ Deno.serve(async (req) => {
       return json({ success: true, data: data || [] });
     }
 
-    const id = getSearchParams(req).get('id') || getLastPathSegment(req);
+    const rawPath = getPath(req).split('?')[0];
+    const pathParts = rawPath.split('/').filter(Boolean);
+    const isDetail = rawPath.includes('/detail');
+    const id = getSearchParams(req).get('id') || (isDetail ? pathParts[pathParts.length - 2] : pathParts[pathParts.length - 1]);
     if (method === 'GET' && id) {
-      if (getPath(req).includes('/detail')) return await getStudentDetail(id, userId, isAdm);
+      if (isDetail) return await getStudentDetail(id, userId, isAdm);
       let q = supabase.from('students').select('*').eq('id', id);
       if (!isAdm) q = q.eq('teacher_id', userId);
       const { data } = await q.single();

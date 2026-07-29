@@ -8,6 +8,7 @@ const guruLinks = [
   { page: 'absensi', icon: 'fa-user-check', label: 'Absensi', path: '/app/absensi' },
   { page: 'nilai', icon: 'fa-star', label: 'Penilaian', path: '/app/nilai' },
   { page: 'penilaian-semester', icon: 'fa-chart-line', label: 'Nilai Semester', path: '/app/penilaian-semester' },
+  { page: 'analisis-nilai', icon: 'fa-chart-simple', label: 'Analisis', path: '/app/analisis-nilai' },
   { page: 'agenda', icon: 'fa-calendar-day', label: 'Agenda', path: '/app/agenda' },
   { page: 'data', icon: 'fa-users', label: 'Siswa', path: '/app/data' },
   { page: 'kalender', icon: 'fa-calendar-alt', label: 'Kalender', path: '/app/kalender' },
