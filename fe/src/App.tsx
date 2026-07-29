@@ -17,6 +17,7 @@ const Absensi = lazy(() => import('./pages/Absensi'));
 const Nilai = lazy(() => import('./pages/Nilai'));
 const PenilaianSemester = lazy(() => import('./pages/PenilaianSemester'));
 const AnalisisNilai = lazy(() => import('./pages/AnalisisNilai'));
+const Materi = lazy(() => import('./pages/Materi'));
 const Data = lazy(() => import('./pages/Data'));
 const KalenderPendidikan = lazy(() => import('./pages/KalenderPendidikan'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -27,6 +28,7 @@ const UsersPage = lazy(() => import('./pages/admin/UsersPage'));
 const AcademicYearsPage = lazy(() => import('./pages/admin/AcademicYearsPage'));
 const SubjectsPage = lazy(() => import('./pages/admin/SubjectsPage'));
 const LogsPage = lazy(() => import('./pages/admin/LogsPage'));
+const AnnouncementsPage = lazy(() => import('./pages/admin/AnnouncementsPage'));
 
 function SuspenseFallback() {
   return (
@@ -71,6 +73,7 @@ export default function App() {
         <Route path="nilai" element={<Suspense fallback={<SuspenseFallback />}><Nilai /></Suspense>} />
         <Route path="penilaian-semester" element={<Suspense fallback={<SuspenseFallback />}><PenilaianSemester /></Suspense>} />
         <Route path="analisis-nilai" element={<Suspense fallback={<SuspenseFallback />}><AnalisisNilai /></Suspense>} />
+        <Route path="materi" element={<Suspense fallback={<SuspenseFallback />}><Materi /></Suspense>} />
         <Route path="data" element={<Suspense fallback={<SuspenseFallback />}><Data /></Suspense>} />
         <Route path="kalender" element={<Suspense fallback={<SuspenseFallback />}><KalenderPendidikan /></Suspense>} />
         <Route path="settings" element={<Suspense fallback={<SuspenseFallback />}><Settings /></Suspense>} />
@@ -84,6 +87,7 @@ export default function App() {
             <Route path="admin/academic-years" element={<Suspense fallback={<SuspenseFallback />}><AcademicYearsPage /></Suspense>} />
             <Route path="admin/subjects" element={<Suspense fallback={<SuspenseFallback />}><SubjectsPage /></Suspense>} />
             <Route path="admin/logs" element={<Suspense fallback={<SuspenseFallback />}><LogsPage /></Suspense>} />
+            <Route path="admin/announcements" element={<Suspense fallback={<SuspenseFallback />}><AnnouncementsPage /></Suspense>} />
           </>
         )}
       </Route>
@@ -96,6 +100,7 @@ export default function App() {
           <Route path="academic-years" element={<Navigate to="/app/admin/academic-years" replace />} />
           <Route path="subjects" element={<Navigate to="/app/admin/subjects" replace />} />
           <Route path="logs" element={<Navigate to="/app/admin/logs" replace />} />
+          <Route path="announcements" element={<Navigate to="/app/admin/announcements" replace />} />
         </Route>
       )}
 

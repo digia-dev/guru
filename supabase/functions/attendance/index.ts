@@ -1,5 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders, handleCors, getPath, getSearchParams } from '../_shared/cors.ts';
+import { corsHeaders, handleCors, logActivity, getPath, getSearchParams } from '../_shared/cors.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
@@ -71,18 +71,38 @@ Deno.serve(async (req) => {
 
     if (method === 'POST') {
       const { class: cls, event_date, subject_id, records } = await req.json();
+      const affectedIds = [...new Set(records.map((r: any) => r.student_id))];
       for (const rec of records) {
         if (rec.keterangan) {
           const { data: existing } = await supabase.from('attendance').select('id').eq('teacher_id', userId).eq('student_id', rec.student_id).eq('event_date', event_date).maybeSingle();
           if (existing) {
             await supabase.from('attendance').update({ keterangan: rec.keterangan, subject_id: subject_id || null }).eq('id', existing.id);
+            logActivity(appUser.id, 'UPDATE', 'attendance', existing.id, { student_id: rec.student_id, keterangan: rec.keterangan });
           } else {
             await supabase.from('attendance').insert({ teacher_id: userId, student_id: rec.student_id, event_date, class: cls, keterangan: rec.keterangan, subject_id: subject_id || null });
           }
         } else {
           await supabase.from('attendance').delete().eq('teacher_id', userId).eq('student_id', rec.student_id).eq('event_date', event_date);
+          logActivity(appUser.id, 'DELETE', 'attendance', String(rec.student_id), {});
         }
       }
+      const month = new Date(event_date).getMonth() + 1;
+      const yr = new Date(event_date).getFullYear();
+      const sem = month >= 7 ? 'Ganjil' : 'Genap';
+      const sd = sem === 'Ganjil' ? `${yr}-07-01` : `${yr}-01-01`;
+      const ed = sem === 'Ganjil' ? `${yr}-12-31` : `${yr}-06-30`;
+      for (const sid of affectedIds) {
+        let aq = supabase.from('attendance').select('keterangan').eq('student_id', sid).gte('event_date', sd).lte('event_date', ed);
+        if (!isAdm) aq = aq.eq('teacher_id', userId);
+        const { data: rows } = await aq;
+        let h = 0, total = 0;
+        (rows || []).forEach((r: any) => { total++; if (r.keterangan === 'H') h++; });
+        const kehadiran = total > 0 ? Math.round((h / total) * 100) : 0;
+        let gq = supabase.from('grades').update({ kehadiran }).eq('student_id', sid).eq('semester', sem);
+        if (!isAdm) gq = gq.eq('teacher_id', userId);
+        await gq;
+      }
+      logActivity(appUser.id, 'CREATE', 'attendance', String(records.length) + ' records', { count: records.length, class: cls, date: event_date });
       return json({ success: true, message: 'Attendance saved', count: records.length });
     }
 

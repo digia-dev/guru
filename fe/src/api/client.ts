@@ -6,7 +6,8 @@ const FUNCTIONS_MAP: Record<string, string> = {
   auth: 'auth', students: 'students', classes: 'classes', attendance: 'attendance',
   grades: 'grades', tabungan: 'tabungan', 'kas-umum': 'kas-umum', materi: 'materi',
   agenda: 'agenda', dashboard: 'dashboard', search: 'search', admin: 'admin',
-  notifications: 'notifications', semesters: 'admin', 'calendar-events': 'calendar-events',
+  notifications: 'notifications', announcements: 'notifications', 'my-announcements': 'notifications',
+  semesters: 'admin', 'calendar-events': 'calendar-events',
   subjects: 'admin', activities: 'agenda', 'academic-years': 'admin', logs: 'admin', ai: 'ai',
   timetable: 'timetable', analytics: 'analytics', rapor: 'rapor',
 };
@@ -35,7 +36,7 @@ async function callFn(method: string, path: string, body?: any, params?: any) {
   const [, group, ...rest] = cleanPath.split('/');
   const funcName = FUNCTIONS_MAP[group];
   if (!funcName) throw new Error(`Unknown API route: ${path}`);
-  const subPath = rest.length ? '/' + rest.join('/') : (group !== funcName ? '/' + group : '');
+  const subPath = rest.length ? '/' + (group !== funcName ? group + '/' : '') + rest.join('/') : (group !== funcName ? '/' + group : '');
 
   const mergedParams = { ...Object.fromEntries(new URLSearchParams(qsFromPath).entries()), ...params };
   const qs = Object.keys(mergedParams).length ? '?' + new URLSearchParams(mergedParams).toString() : '';

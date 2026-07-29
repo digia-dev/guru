@@ -1,5 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders, handleCors } from '../_shared/cors.ts';
+import { corsHeaders, handleCors, logActivity } from '../_shared/cors.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
     if (method === 'POST' && path === '/forgot-password') return await handleForgotPassword(req);
     if (method === 'POST' && path === '/reset-password') return await handleResetPassword(req);
     if (method === 'GET' && path === '/users') return await handleUsers(req);
+    if (method === 'POST' && path === '/change-password') return await handleChangePassword(req);
 
     return new Response(JSON.stringify({ success: false, error: 'Not found' }), { status: 404, headers: corsHeaders });
   } catch (err: any) {
@@ -45,6 +46,14 @@ async function getAppUserById(id: number) {
   return data;
 }
 
+async function getUserIdByAuth(authHeader: string): Promise<number | null> {
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const { data: { user } } = await supabaseAdmin.auth.getUser(authHeader.slice(7));
+  if (!user) return null;
+  const appUser = await getAppUser(user.id);
+  return appUser?.id || null;
+}
+
 function json(data: any, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
@@ -59,6 +68,9 @@ async function handleLogin(req: Request) {
     await supabaseAdmin.auth.admin.signOut(authData.user.id);
     return json({ success: false, error: 'User not found in application' }, 401);
   }
+
+  const userId = appUser?.id;
+  if (userId) await logActivity(userId, 'LOGIN', 'auth', undefined, { email }, req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || '');
 
   return json({
     success: true,
@@ -85,6 +97,8 @@ async function handleRegister(req: Request) {
   }).select().single();
   if (insertError) return json({ success: false, error: insertError.message }, 500);
 
+  if (newUser?.id) await logActivity(newUser.id, 'REGISTER', 'user', newUser.id?.toString(), { name: body.name, email: body.email });
+
   return json({ success: true, data: { id: newUser.id, email: newUser.email, name: newUser.name } }, 201);
 }
 
@@ -102,6 +116,8 @@ async function handleLogout(req: Request) {
     const { data: { user } } = await supabaseAdmin.auth.getUser(auth.slice(7));
     if (user) await supabaseAdmin.auth.admin.signOut(user.id);
   }
+  const uid = await getUserIdByAuth(auth);
+  if (uid) await logActivity(uid, 'LOGOUT', 'auth', undefined, undefined, req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || '');
   return json({ success: true, message: 'Logged out' });
 }
 
@@ -132,6 +148,23 @@ async function handleResetPassword(req: Request) {
   const { error } = await supabaseAdmin.auth.admin.updateUserById(user.id, { password });
   if (error) return json({ success: false, error: 'Gagal mereset password' }, 400);
   return json({ success: true, message: 'Password berhasil direset' });
+}
+
+async function handleChangePassword(req: Request) {
+  const { currentPassword, newPassword } = await req.json();
+  const auth = req.headers.get('Authorization');
+  if (!auth?.startsWith('Bearer ')) return json({ success: false, error: 'Unauthorized' }, 401);
+
+  const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(auth.slice(7));
+  if (userError || !user) return json({ success: false, error: 'Unauthorized' }, 401);
+
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email: user.email!, password: currentPassword });
+  if (signInError) return json({ success: false, error: 'Password saat ini salah' }, 400);
+
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(user.id, { password: newPassword });
+  if (error) return json({ success: false, error: 'Gagal mengubah password' }, 400);
+
+  return json({ success: true, message: 'Password berhasil diubah' });
 }
 
 async function handleUsers(req: Request) {

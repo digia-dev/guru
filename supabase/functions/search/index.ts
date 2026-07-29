@@ -1,5 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders, handleCors, getSearchParams } from '../_shared/cors.ts';
+import { corsHeaders, handleCors, getSearchParams, logActivity } from '../_shared/cors.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
     const { data: clsRows } = await supabase.from('students').select('class').ilike('class', pattern).limit(5);
     const classes = [...new Set((clsRows || []).map(r => r.class))];
 
+    logActivity(appUser.id, 'SEARCH', 'students', undefined, { query: q });
     return json({ success: true, data: { students: students || [], classes } });
   } catch (err: any) { return json({ success: false, error: err.message }, 500); }
 });

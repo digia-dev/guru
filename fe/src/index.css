@@ -13,6 +13,7 @@
 
   body {
     @apply bg-surface-secondary text-text-primary font-sans;
+    touch-action: manipulation;
   }
 
   *:focus-visible {
@@ -183,4 +184,12 @@
   .desktop-only { @apply hidden lg:block; }
   .mobile-only { @apply lg:hidden; }
   .tablet-only { @apply hidden md:block lg:hidden; }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
 }

@@ -1,5 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders, handleCors, getPath, getSearchParams, getLastPathSegment } from '../_shared/cors.ts';
+import { corsHeaders, handleCors, getPath, getSearchParams, getLastPathSegment, logActivity } from '../_shared/cors.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
       const body = await req.json();
       const { data, error } = await supabase.from('tabungan').insert({ teacher_id: userId, ...body }).select().single();
       if (error) return json({ success: false, error: error.message }, 500);
+      logActivity(appUser.id, 'CREATE', 'tabungan', data.id?.toString(), { student_id: body.student_id, uang_masuk: body.uang_masuk, uang_keluar: body.uang_keluar });
       return json({ success: true, data }, 201);
     }
 
@@ -59,6 +60,7 @@ Deno.serve(async (req) => {
       if (!isAdm) q = q.eq('teacher_id', userId);
       const { data, error } = await q.select().single();
       if (error || !data) return json({ success: false, error: 'Record not found' }, 404);
+      logActivity(appUser.id, 'UPDATE', 'tabungan', id, { student_id: body.student_id });
       return json({ success: true, data });
     }
 
@@ -66,6 +68,7 @@ Deno.serve(async (req) => {
       let q = supabase.from('tabungan').delete().eq('id', id);
       if (!isAdm) q = q.eq('teacher_id', userId);
       await q;
+      logActivity(appUser.id, 'DELETE', 'tabungan', id.toString(), {});
       return json({ success: true, message: 'Tabungan record deleted' });
     }
 

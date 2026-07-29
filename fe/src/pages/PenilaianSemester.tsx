@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
@@ -21,7 +21,8 @@ export default function PenilaianSemester() {
   useEffect(() => { if (classes.length > 0 && !selectedClass) setSelectedClass(classes[0]); }, [classes, selectedClass]);
   const [semester, setSemester] = useState<'Ganjil' | 'Genap'>(() => { const m = new Date().getMonth() + 1; return m >= 7 ? 'Ganjil' : 'Genap'; });
   const [selectedSubject, setSelectedSubject] = useState('');
-  const [stsChanges, setStsChanges] = useState<Map<string, { sts: string; sas: string; student_id: string; semester: string }>>(new Map());
+  const changesRef = useRef<Map<string, { sts: string; sas: string; student_id: string; semester: string }>>(new Map());
+  const [, forceRender] = useState(0);
 
   const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
   useEffect(() => {
@@ -46,36 +47,46 @@ export default function PenilaianSemester() {
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
+  const clearChanges = () => { changesRef.current = new Map(); forceRender(n => n + 1); };
+
   const doSave = async () => {
-    if (stsChanges.size === 0) return;
+    const map = changesRef.current;
+    if (map.size === 0) return;
     setSaveStatus('saving');
     try {
       const subjectId = allSubjects.find(s => s.code === selectedSubject)?.id || null;
-      const batch = Array.from(stsChanges.values()).map((c) => ({
+      const batch = Array.from(map.values()).map((c) => ({
         student_id: c.student_id, semester: c.semester, subject_id: subjectId,
-        sts: c.sts ? parseFloat(c.sts) : null, sas: c.sas ? parseFloat(c.sas) : null,
-      }));
+        sts: c.sts !== '' ? parseFloat(c.sts) : undefined,
+        sas: c.sas !== '' ? parseFloat(c.sas) : undefined,
+      })).filter((c) => c.sts !== undefined || c.sas !== undefined);
+      if (!batch.length) { clearChanges(); setSaveStatus('idle'); return; }
       await apiClient.post('/grades/batch', batch);
       await queryClient.refetchQueries({ queryKey: ['semester-grades'] });
-      setSaveStatus('saved'); setStsChanges(new Map());
+      setSaveStatus('saved'); clearChanges();
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch { setSaveStatus('error'); toast.error('Gagal menyimpan'); }
   };
 
   const { schedule, saveNow } = useAutoSave(doSave, 5000);
-  useKeyboardShortcuts({ save: () => { if (stsChanges.size > 0) saveNow(); } });
+  useKeyboardShortcuts({ save: () => { if (changesRef.current.size > 0) saveNow(); } });
 
   const handleInput = (studentId: string, field: 'sts' | 'sas', value: string) => {
-    setStsChanges(prev => {
-      const next = new Map(prev);
-      const existing = next.get(studentId);
-      next.set(studentId, { student_id: studentId, semester, sts: field === 'sts' ? value : (existing?.sts ?? ''), sas: field === 'sas' ? value : (existing?.sas ?? '') });
-      schedule(); return next;
-    });
+    const item = semesterData.find(d => d.student_id === studentId);
+    const origSts = item?.sts != null ? String(item.sts) : '';
+    const origSas = item?.sas != null ? String(item.sas) : '';
+    const prev = changesRef.current.get(studentId);
+    const newSts = field === 'sts' ? value : (prev?.sts !== undefined ? prev.sts : origSts);
+    const newSas = field === 'sas' ? value : (prev?.sas !== undefined ? prev.sas : origSas);
+    const next = new Map(changesRef.current);
+    next.set(studentId, { student_id: studentId, semester, sts: newSts, sas: newSas });
+    changesRef.current = next;
+    forceRender(n => n + 1);
+    if (newSts && newSas) saveNow(); else schedule();
   };
 
   const getField = (item: SemesterGrade, field: 'sts' | 'sas') => {
-    const change = stsChanges.get(item.student_id);
+    const change = changesRef.current.get(item.student_id);
     if (change && change[field] !== '') return change[field];
     return item[field] ?? '';
   };
@@ -101,7 +112,7 @@ export default function PenilaianSemester() {
           <div>
             <label className="label">Kelas</label>
             <div className="relative">
-              <select value={selectedClass} onChange={(e) => { setSelectedClass(e.target.value); setStsChanges(new Map()); }} className="select-field">
+              <select value={selectedClass} onChange={(e) => { setSelectedClass(e.target.value); clearChanges(); }} className="select-field">
                 {classes.map((c) => <option key={c} value={c}>Kelas {c}</option>)}
               </select>
               <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
@@ -115,7 +126,7 @@ export default function PenilaianSemester() {
               </div>
             ) : (
               <div className="relative">
-                <select value={selectedSubject} onChange={(e) => { setSelectedSubject(e.target.value); setStsChanges(new Map()); }} className="select-field">
+                <select value={selectedSubject} onChange={(e) => { setSelectedSubject(e.target.value); clearChanges(); }} className="select-field">
                   {teacherSubjects.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
                 </select>
                 <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
@@ -125,7 +136,7 @@ export default function PenilaianSemester() {
           <div>
             <label className="label">Semester</label>
             <div className="relative">
-              <select value={semester} onChange={(e) => { setSemester(e.target.value as any); setStsChanges(new Map()); }} className="select-field">
+              <select value={semester} onChange={(e) => { setSemester(e.target.value as any); clearChanges(); }} className="select-field">
                 <option value="Ganjil">Semester Ganjil 2026/2027</option>
                 <option value="Genap">Semester Genap 2026/2027</option>
               </select>
@@ -189,10 +200,10 @@ export default function PenilaianSemester() {
         </div>
       )}
 
-      {stsChanges.size > 0 && (
+      {changesRef.current.size > 0 && saveStatus !== 'saving' && saveStatus !== 'saved' && (
         <button onClick={() => saveNow()} disabled={saveStatus === 'saving'}
-          className={`floating-save-btn text-white disabled:opacity-50 ${saveStatus === 'error' ? 'bg-danger' : 'bg-gradient-to-r from-violet-600 to-indigo-500'}`}>
-          {saveStatus === 'saving' ? <i className="fas fa-spinner fa-spin text-xl"></i> : saveStatus === 'saved' ? <i className="fas fa-check text-xl"></i> : <i className="fas fa-save text-xl"></i>}
+          className="floating-save-btn text-white disabled:opacity-50 bg-gradient-to-r from-violet-600 to-indigo-500 shadow-apple-lg">
+          <i className="fas fa-save text-base"></i>
         </button>
       )}
     </div>

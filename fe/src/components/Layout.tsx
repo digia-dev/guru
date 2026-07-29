@@ -5,6 +5,7 @@ import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
 import TopHeader from './TopHeader';
 import TimerBar from './TimerBar';
+import PullToRefresh from './PullToRefresh';
 
 export default function Layout() {
   const { user } = useAuth();
@@ -19,10 +20,12 @@ export default function Layout() {
       <div className="flex-1 flex flex-col min-w-0">
         <TimerBar />
         <TopHeader />
-        <main className="flex-1 overflow-auto">
-          <div className={`max-w-[1600px] mx-auto px-4 md:px-8 lg:px-8 xl:px-10 py-6 md:py-8 ${bottomNavH} lg:pb-8`}>
-            <Outlet />
-          </div>
+        <main className="flex-1 overflow-auto overscroll-none">
+          <PullToRefresh onRefresh={() => window.location.reload()}>
+            <div className={`max-w-[1600px] mx-auto px-4 md:px-8 lg:px-8 xl:px-10 py-6 md:py-8 ${bottomNavH} lg:pb-8`}>
+              <Outlet />
+            </div>
+          </PullToRefresh>
         </main>
         <BottomNav />
       </div>

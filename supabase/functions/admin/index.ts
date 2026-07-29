@@ -1,5 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders, handleCors, getPath, getSearchParams, getLastPathSegment } from '../_shared/cors.ts';
+import { corsHeaders, handleCors, getPath, getSearchParams, getLastPathSegment, logActivity } from '../_shared/cors.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
       if (authErr) return json({ success: false, error: authErr.message }, 400);
       const { data, error } = await supabase.from('users').insert({ email: body.email, name: body.name, role: body.role || 'guru', teacher_classes: body.teacher_classes || [], teacher_subjects: body.teacher_subjects || [], auth_user_id: authData.user.id }).select().single();
       if (error) return json({ success: false, error: error.message }, 500);
+      await logActivity(appUser.id, 'CREATE', 'user', data.id?.toString(), { name: body.name, email: body.email, role: body.role });
       return json({ success: true, data }, 201);
     }
 
@@ -63,6 +64,7 @@ Deno.serve(async (req) => {
       if (body.teacher_subjects !== undefined) updates.teacher_subjects = body.teacher_subjects;
       const { data } = await supabase.from('users').update(updates).eq('id', id).select().single();
       if (!data) return json({ success: false, error: 'User not found' }, 404);
+      await logActivity(appUser.id, 'UPDATE', 'user', id, { name: body.name, email: body.email });
       return json({ success: true, data });
     }
 
@@ -78,6 +80,7 @@ Deno.serve(async (req) => {
       await supabase.from('materi').delete().eq('teacher_id', id);
       await supabase.from('learning_activities').delete().eq('teacher_id', id);
       const { data: targetUser } = await supabase.from('users').select('auth_user_id').eq('id', id).single();
+      await logActivity(appUser.id, 'DELETE', 'user', id, { email: targetUser ? 'id:' + id : '' });
       if (targetUser) await supabase.auth.admin.deleteUser(targetUser.auth_user_id);
       await supabase.from('users').delete().eq('id', id);
       return json({ success: true, message: 'User deleted' });
@@ -105,8 +108,19 @@ Deno.serve(async (req) => {
       const page = parseInt(getSearchParams(req).get('page') || '1');
       const limit = Math.min(parseInt(getSearchParams(req).get('limit') || '50'), 200);
       const offset = (page - 1) * limit;
-      const { data: logs } = await supabase.rpc('exec_sql', { sql_query: `SELECT al.*, u.name as user_name, u.email as user_email FROM activity_logs al JOIN users u ON u.id = al.user_id ORDER BY al.created_at DESC LIMIT ${limit} OFFSET ${offset}` });
-      return json({ success: true, data: logs || [], pagination: { page, limit, total: 0, totalPages: 0 } });
+      const filterAction = getSearchParams(req).get('action') || '';
+      const filterEntity = getSearchParams(req).get('entity_type') || '';
+      const filterUserId = getSearchParams(req).get('user_id') || '';
+      let where = '';
+      const clauses: string[] = [];
+      if (filterAction) clauses.push(`al.action = '${filterAction.replace(/'/g, "''")}'`);
+      if (filterEntity) clauses.push(`al.entity_type = '${filterEntity.replace(/'/g, "''")}'`);
+      if (filterUserId) clauses.push(`al.user_id = ${parseInt(filterUserId)}`);
+      if (clauses.length > 0) where = ' WHERE ' + clauses.join(' AND ');
+      const { data: logs } = await supabase.rpc('exec_sql', { sql_query: `SELECT al.*, u.name as user_name, u.email as user_email FROM activity_logs al JOIN users u ON u.id = al.user_id${where} ORDER BY al.created_at DESC LIMIT ${limit} OFFSET ${offset}` });
+      const { data: countResult } = await supabase.rpc('exec_sql', { sql_query: `SELECT COUNT(*) as total FROM activity_logs al JOIN users u ON u.id = al.user_id${where}` });
+      const total = (countResult && countResult[0]?.total) || 0;
+      return json({ success: true, data: logs || [], pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
     }
 
     // Subjects CRUD (admin only)
@@ -114,6 +128,7 @@ Deno.serve(async (req) => {
       const body = await req.json();
       const { data, error } = await supabase.from('subjects').insert(body).select().single();
       if (error) return json({ success: false, error: error.message }, 500);
+      await logActivity(appUser.id, 'CREATE', 'subject', data.id?.toString(), { name: body.name });
       return json({ success: true, data }, 201);
     }
 
@@ -121,11 +136,13 @@ Deno.serve(async (req) => {
       const body = await req.json();
       const { data, error } = await supabase.from('subjects').update(body).eq('id', id).select().single();
       if (error || !data) return json({ success: false, error: 'Subject not found' }, 404);
+      await logActivity(appUser.id, 'UPDATE', 'subject', id, { name: body.name });
       return json({ success: true, data });
     }
 
     if (path.startsWith('/subjects/') && method === 'DELETE' && id) {
       await supabase.from('subjects').delete().eq('id', id);
+      await logActivity(appUser.id, 'DELETE', 'subject', id, {});
       return json({ success: true, message: 'Subject deleted' });
     }
 
@@ -134,18 +151,30 @@ Deno.serve(async (req) => {
       const body = await req.json();
       const { data, error } = await supabase.from('academic_years').insert(body).select().single();
       if (error) return json({ success: false, error: error.message }, 500);
+      await logActivity(appUser.id, 'CREATE', 'academic_year', data.id?.toString(), { name: body.name });
       return json({ success: true, data }, 201);
     }
 
-    if (path.startsWith('/academic-years/') && method === 'PUT' && id) {
+    if (path.startsWith('/academic-years/') && method === 'PUT') {
+      if (path.endsWith('/activate')) {
+        const parts = path.split('/').filter(Boolean);
+        const yearId = parts[parts.length - 2];
+        await supabase.from('academic_years').update({ is_active: false }).neq('id', yearId);
+        const { data, error } = await supabase.from('academic_years').update({ is_active: true }).eq('id', yearId).select().single();
+        if (error || !data) return json({ success: false, error: 'Academic year not found' }, 404);
+        await logActivity(appUser.id, 'UPDATE', 'academic_year', yearId, { name: data.name });
+        return json({ success: true, data });
+      }
       const body = await req.json();
       const { data, error } = await supabase.from('academic_years').update(body).eq('id', id).select().single();
       if (error || !data) return json({ success: false, error: 'Academic year not found' }, 404);
+      await logActivity(appUser.id, 'UPDATE', 'academic_year', id, { name: body.name });
       return json({ success: true, data });
     }
 
     if (path.startsWith('/academic-years/') && method === 'DELETE' && id) {
       await supabase.from('academic_years').delete().eq('id', id);
+      await logActivity(appUser.id, 'DELETE', 'academic_year', id, {});
       return json({ success: true, message: 'Academic year deleted' });
     }
 
@@ -154,24 +183,30 @@ Deno.serve(async (req) => {
       const body = await req.json();
       const { data, error } = await supabase.from('semesters').insert(body).select().single();
       if (error) return json({ success: false, error: error.message }, 500);
+      await logActivity(appUser.id, 'CREATE', 'semester', data.id?.toString(), { name: body.name });
       return json({ success: true, data }, 201);
     }
 
-    if (path.startsWith('/semesters/') && method === 'PUT' && id) {
+    if (path.startsWith('/semesters/') && method === 'PUT') {
       if (path.endsWith('/activate')) {
-        await supabase.from('semesters').update({ is_active: false }).neq('id', id);
-        const { data, error } = await supabase.from('semesters').update({ is_active: true }).eq('id', id).select().single();
+        const parts = path.split('/').filter(Boolean);
+        const semId = parts[parts.length - 2];
+        await supabase.from('semesters').update({ is_active: false }).neq('id', semId);
+        const { data, error } = await supabase.from('semesters').update({ is_active: true }).eq('id', semId).select().single();
         if (error || !data) return json({ success: false, error: 'Semester not found' }, 404);
+        await logActivity(appUser.id, 'UPDATE', 'semester', semId, { name: data.name });
         return json({ success: true, data });
       }
       const body = await req.json();
       const { data, error } = await supabase.from('semesters').update(body).eq('id', id).select().single();
       if (error || !data) return json({ success: false, error: 'Semester not found' }, 404);
+      await logActivity(appUser.id, 'UPDATE', 'semester', id, { name: body.name });
       return json({ success: true, data });
     }
 
     if (path.startsWith('/semesters/') && method === 'DELETE' && id) {
       await supabase.from('semesters').delete().eq('id', id);
+      await logActivity(appUser.id, 'DELETE', 'semester', id, {});
       return json({ success: true, message: 'Semester deleted' });
     }
 

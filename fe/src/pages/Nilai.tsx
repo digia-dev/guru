@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import toast from 'react-hot-toast';
-import { Student, Grade, Subject } from '../types';
+import { Student, Grade, Subject, SemesterGrade } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useClasses } from '../hooks/useClasses';
 import { useAutoSave } from '../hooks/useAutoSave';
@@ -51,6 +51,18 @@ export default function Nilai() {
   });
 
   const gradeMap = new Map(grades.map((g) => [g.student_id, g]));
+
+  const subjectId = allSubjects.find(s => s.code === selectedSubject)?.id;
+  const { data: semesterData = [] } = useQuery({
+    queryKey: ['semester-grades-summary', selectedClass, semester, selectedSubject],
+    queryFn: async () => {
+      const params = `class=${selectedClass}&semester=${semester}${subjectId ? `&subject_id=${subjectId}` : ''}`;
+      const { data } = await apiClient.get(`/grades/semester?${params}`);
+      return data.data as SemesterGrade[];
+    },
+    enabled: !!selectedClass && !!subjectId,
+  });
+  const semesterMap = new Map(semesterData.map((d: any) => [d.student_id, d]));
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const doSave = async () => {
@@ -192,9 +204,7 @@ export default function Nilai() {
                   <th className="table-header text-center">Rata Pengetahuan</th>
                   <th className="table-header text-center">Rata Keterampilan</th>
                   <th className="table-header text-center">Rata Sikap</th>
-                  <th className="table-header text-center">STS</th>
-                  <th className="table-header text-center">SAS</th>
-                  <th className="table-header text-center">Nilai Rapor</th>
+                  <th className="table-header text-center">Rata Harian</th>
                 </tr>
               ) : (
                 <>
@@ -215,7 +225,7 @@ export default function Nilai() {
             <tbody>
               {students.length === 0 ? (
                 <tr>
-                  <td colSpan={bab === 'all' ? 7 : 17} className="text-center py-12 text-text-tertiary">
+                  <td colSpan={bab === 'all' ? 5 : 17} className="text-center py-12 text-text-tertiary">
                     <i className="fas fa-users text-2xl mb-2 block"></i>
                     Tidak ada siswa di kelas ini
                   </td>
@@ -228,22 +238,16 @@ export default function Nilai() {
                     ambilNilai(gradeMap, gradeChanges, student.student_id, 'sikap_disiplin'),
                     ambilNilai(gradeMap, gradeChanges, student.student_id, 'sikap_tgg_jawab'),
                   );
-                  const g = gradeMap.get(student.student_id);
-                  const sts = (g as any)?.sts ?? null;
-                  const sas = (g as any)?.sas ?? null;
-                  const pRataNum = overall.pengetahuan_rata ?? 0;
-                  const kRataNum = overall.keterampilan_rata ?? 0;
-                  const sRataNum = sRata ?? 0;
-                  const nRapor = sts || sas ? Math.round((((pRataNum + kRataNum + sRataNum) / 3) * 0.5) + (sts ?? 0) * 0.1 + (sas ?? 0) * 0.2) : null;
+                  const sd = semesterMap.get(student.student_id);
+                  const rataHarian = sd?.rata_harian ?? null;
+                  const p = overall.pengetahuan_rata, k = overall.keterampilan_rata, s = sRata;
                   return (
                     <tr key={student.student_id} className="hover:bg-surface-secondary transition-colors">
                       <td className="table-cell sticky left-0 bg-white z-10 font-medium">{student.name}</td>
-                      <td className="table-cell text-center font-bold bg-surface-secondary/50">{overall.pengetahuan_rata ?? '-'}</td>
-                      <td className="table-cell text-center font-bold bg-surface-secondary/50">{overall.keterampilan_rata ?? '-'}</td>
-                      <td className="table-cell text-center font-bold bg-surface-secondary/50">{sRata ?? '-'}</td>
-                      <td className="table-cell text-center font-semibold">{sts ?? '-'}</td>
-                      <td className="table-cell text-center font-semibold">{sas ?? '-'}</td>
-                      <td className="table-cell text-center font-bold text-primary bg-soft-purple">{nRapor ?? '-'}</td>
+                      <td className="table-cell text-center font-bold bg-surface-secondary/50">{p ?? '-'}</td>
+                      <td className="table-cell text-center font-bold bg-surface-secondary/50">{k ?? '-'}</td>
+                      <td className="table-cell text-center font-bold bg-surface-secondary/50">{s ?? '-'}</td>
+                      <td className="table-cell text-center font-bold text-primary bg-soft-purple">{rataHarian ?? '-'}</td>
                     </tr>
                   );
                 }

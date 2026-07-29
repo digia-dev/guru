@@ -27,3 +27,28 @@ export function getLastPathSegment(req: Request): string {
   const parts = path.split('/').filter(Boolean);
   return parts.pop() || '';
 }
+
+let _supabase: any = null;
+async function getSupabase() {
+  if (!_supabase) {
+    const { createClient } = await import('jsr:@supabase/supabase-js@2');
+    _supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  }
+  return _supabase;
+}
+
+export async function logActivity(userId: number, action: string, entityType: string, entityId?: string, details?: any, ipAddress?: string) {
+  try {
+    const supabase = await getSupabase();
+    await supabase.from('activity_logs').insert({
+      user_id: userId,
+      action,
+      entity_type: entityType,
+      entity_id: entityId || null,
+      details: details || null,
+      ip_address: ipAddress || null,
+    });
+  } catch {
+    // silently fail - logging should not break the main operation
+  }
+}

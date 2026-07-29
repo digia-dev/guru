@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import { Notification } from '../types';
 
 const typeIcons: Record<string, string> = {
@@ -15,6 +16,7 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { permission, subscribed, requestPermission, subscribe, unsubscribe } = usePushNotifications();
 
   useEffect(() => {
     const fetch = async () => {
@@ -28,7 +30,7 @@ export default function NotificationBell() {
       } catch {}
     };
     fetch();
-    const interval = setInterval(fetch, 60000);
+    const interval = setInterval(fetch, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -39,6 +41,12 @@ export default function NotificationBell() {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  useEffect(() => {
+    if (permission === 'granted' && !subscribed) {
+      subscribe();
+    }
+  }, [permission, subscribed, subscribe]);
 
   const handleMarkRead = async (id: number) => {
     try {
@@ -62,11 +70,22 @@ export default function NotificationBell() {
     setOpen(false);
   };
 
+  const handlePushToggle = async () => {
+    if (permission !== 'granted') {
+      const ok = await requestPermission();
+      if (ok) await subscribe();
+    } else if (subscribed) {
+      await unsubscribe();
+    } else {
+      await subscribe();
+    }
+  };
+
   return (
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="relative p-3 rounded-lg hover:bg-gray-100 text-gray-500"
+        className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-500"
         title="Notifikasi"
       >
         <i className="fas fa-bell text-xl"></i>
@@ -115,6 +134,15 @@ export default function NotificationBell() {
                 </button>
               ))
             )}
+          </div>
+
+          <div className="px-4 py-2 border-t border-gray-100 flex items-center justify-between">
+            <span className="text-[10px] text-gray-400">
+              {subscribed ? 'Push aktif' : permission === 'denied' ? 'Push ditolak' : 'Push nonaktif'}
+            </span>
+            <button onClick={handlePushToggle} className="text-[10px] text-indigo-600 hover:underline">
+              {subscribed ? 'Nonaktifkan' : 'Aktifkan'}
+            </button>
           </div>
         </div>
       )}

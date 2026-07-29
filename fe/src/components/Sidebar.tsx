@@ -4,11 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import { useImpersonation } from '../context/ImpersonationContext';
 
 const guruLinks = [
-  { page: 'dashboard', icon: 'fa-grid-2', label: 'Beranda', path: '/app' },
+  { page: 'dashboard', icon: 'fa-home', label: 'Beranda', path: '/app' },
   { page: 'absensi', icon: 'fa-user-check', label: 'Absensi', path: '/app/absensi' },
   { page: 'nilai', icon: 'fa-star', label: 'Penilaian', path: '/app/nilai' },
   { page: 'penilaian-semester', icon: 'fa-chart-line', label: 'Nilai Semester', path: '/app/penilaian-semester' },
   { page: 'analisis-nilai', icon: 'fa-chart-simple', label: 'Analisis', path: '/app/analisis-nilai' },
+  { page: 'materi', icon: 'fa-book', label: 'Materi', path: '/app/materi' },
   { page: 'agenda', icon: 'fa-calendar-day', label: 'Agenda', path: '/app/agenda' },
   { page: 'data', icon: 'fa-users', label: 'Siswa', path: '/app/data' },
   { page: 'kalender', icon: 'fa-calendar-alt', label: 'Kalender', path: '/app/kalender' },
@@ -21,6 +22,7 @@ const adminLinks = [
   { page: 'admin-academic-years', icon: 'fa-calendar-plus', label: 'Tahun Ajaran', path: '/app/admin/academic-years' },
   { page: 'admin-subjects', icon: 'fa-book', label: 'Pelajaran', path: '/app/admin/subjects' },
   { page: 'admin-logs', icon: 'fa-terminal', label: 'Aktivitas', path: '/app/admin/logs' },
+  { page: 'admin-announcements', icon: 'fa-bullhorn', label: 'Pengumuman', path: '/app/admin/announcements' },
 ];
 
 export default function Sidebar() {

@@ -1,5 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders, handleCors, getPath, getSearchParams, getLastPathSegment } from '../_shared/cors.ts';
+import { corsHeaders, handleCors, getPath, getSearchParams, getLastPathSegment, logActivity } from '../_shared/cors.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
       const { data, error } = await supabase.from('learning_activities').insert({ teacher_id: userId, ...body }).select().single();
       if (error) return json({ success: false, error: error.message }, 500);
       await supabase.from('notifications').insert({ user_id: userId, title: `Agenda ${body.class}`, message: `${body.event_date} — ${body.waktu_mulai}-${body.waktu_selesai}`, type: 'agenda', link: '/agenda' });
+      await logActivity(appUser.id, 'CREATE', 'activity', data.id?.toString(), { catatan: body.catatan, class: body.class, date: body.event_date });
       return json({ success: true, data }, 201);
     }
 
@@ -64,6 +65,7 @@ Deno.serve(async (req) => {
       if (!isAdm) q = q.eq('teacher_id', userId);
       const { data, error } = await q.select().single();
       if (error || !data) return json({ success: false, error: 'Activity not found' }, 404);
+      await logActivity(appUser.id, 'UPDATE', 'activity', id, { catatan: body.catatan });
       return json({ success: true, data });
     }
 
@@ -71,6 +73,7 @@ Deno.serve(async (req) => {
       let q = supabase.from('learning_activities').delete().eq('id', id);
       if (!isAdm) q = q.eq('teacher_id', userId);
       await q;
+      await logActivity(appUser.id, 'DELETE', 'activity', id, {});
       return json({ success: true, message: 'Activity deleted' });
     }
 

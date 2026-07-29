@@ -1,5 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders, handleCors, getPath, getSearchParams, getLastPathSegment } from '../_shared/cors.ts';
+import { corsHeaders, handleCors, getPath, getSearchParams, getLastPathSegment, logActivity } from '../_shared/cors.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
       if (existing) return json({ success: false, error: 'Student ID already exists' }, 409);
       const { data, error } = await supabase.from('students').insert({ ...body, teacher_id: tid }).select().single();
       if (error) return json({ success: false, error: error.message }, 500);
+      logActivity(appUser.data.id, 'CREATE', 'student', data.id?.toString(), { name: data.name, student_id: data.student_id, class: body.class });
       return json({ success: true, data }, 201);
     }
 
@@ -58,16 +59,18 @@ Deno.serve(async (req) => {
       if (!isAdm) q = q.eq('teacher_id', userId);
       const { data, error } = await q.select().single();
       if (error || !data) return json({ success: false, error: 'Student not found' }, 404);
+      logActivity(appUser.data.id, 'UPDATE', 'student', id, { name: body.name, student_id: body.student_id });
       return json({ success: true, data });
     }
 
     if (method === 'DELETE' && id) {
-      const { data: s } = await supabase.from('students').select('student_id').eq('id', id).single();
+      const { data: s } = await supabase.from('students').select('student_id, name').eq('id', id).single();
       if (!s) return json({ success: false, error: 'Student not found' }, 404);
       await supabase.from('attendance').delete().eq('teacher_id', userId).eq('student_id', s.student_id);
       await supabase.from('grades').delete().eq('teacher_id', userId).eq('student_id', s.student_id);
       await supabase.from('tabungan').delete().eq('teacher_id', userId).eq('student_id', s.student_id);
       await supabase.from('students').delete().eq('id', id);
+      logActivity(appUser.data.id, 'DELETE', 'student', id.toString(), { student_id: s.student_id, name: s.name });
       return json({ success: true, message: 'Student deleted' });
     }
 

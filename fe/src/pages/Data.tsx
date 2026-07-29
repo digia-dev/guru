@@ -255,28 +255,6 @@ function TabunganTab({ selectedClass }: { selectedClass: string }) {
   );
 }
 
-function MateriTab() {
-  const [title, setTitle] = useState(''); const [url, setUrl] = useState(''); const [type, setType] = useState('link');
-  const queryClient = useQueryClient();
-  const { data: materiList = [] } = useQuery({ queryKey: ['materi'], queryFn: async () => { const { data } = await apiClient.get('/materi'); return data.data as any[]; } });
-  const addMutation = useMutation({ mutationFn: async () => apiClient.post('/materi', { title, url, type }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['materi'] }); toast.success('Materi ditambahkan!'); setTitle(''); setUrl(''); }, onError: () => toast.error('Gagal menambah materi') });
-  const deleteMutation = useMutation({ mutationFn: async (id: number) => apiClient.delete(`/materi/${id}`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['materi'] }); toast.success('Materi dihapus!'); } });
-  return (
-    <div className="space-y-4">
-      <Card><h3 className="font-semibold text-sm mb-3">Tambah Materi</h3>
-        <div className="space-y-3"><input type="text" placeholder="Judul" value={title} onChange={(e) => setTitle(e.target.value)} className="input-field" /><input type="text" placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} className="input-field" />
-          <div className="relative"><select value={type} onChange={e => setType(e.target.value)} className="select-field"><option value="link">Link</option><option value="video">Video</option><option value="dokumen">Dokumen</option></select><i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i></div>
-          <Button onClick={() => addMutation.mutate()} disabled={addMutation.isPending || !title || !url} loading={addMutation.isPending} className="w-full">Simpan Tautan</Button>
-        </div>
-      </Card>
-      <Card padding={false}><div className="px-5 py-4 border-b border-black/[0.06]"><h3 className="font-semibold text-sm">Daftar Materi</h3></div>
-        {materiList.length === 0 ? <div className="text-center py-12 text-text-tertiary"><i className="fas fa-book text-2xl mb-2 block"></i>Belum ada materi</div> :
-          <div className="divide-y divide-black/[0.04]">{materiList.map((m: any) => (<div key={m.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-surface-secondary transition-colors"><div className="flex items-center gap-3"><i className={`fas ${m.type === 'video' ? 'fa-video' : m.type === 'dokumen' ? 'fa-file-alt' : 'fa-link'} text-primary`}></i><div><a href={m.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:underline">{m.title}</a><p className="text-xs text-text-tertiary">{m.uploaded_at ? new Date(m.uploaded_at).toLocaleDateString('id-ID') : ''}</p></div></div><button onClick={() => deleteMutation.mutate(m.id)} className="text-text-tertiary hover:text-danger"><i className="fas fa-trash"></i></button></div>))}</div>}
-      </Card>
-    </div>
-  );
-}
-
 function KelasTab() {
   const [kelasList, setKelasList] = useState<{ name: string; student_count: number }[]>([]); const [newName, setNewName] = useState(''); const [editName, setEditName] = useState(''); const [editOrig, setEditOrig] = useState('');
   const queryClient = useQueryClient();
@@ -367,7 +345,7 @@ export default function Data() {
   const isAdm = user?.role === 'admin';
   const [allClasses, setAllClasses] = useState<string[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
-  const [tab, setTab] = useState<'siswa' | 'tabungan' | 'materi' | 'guru' | 'kelas'>('siswa');
+  const [tab, setTab] = useState<'siswa' | 'tabungan' | 'kelas'>('siswa');
   const [teachers, setTeachers] = useState<{ id: number; name: string }[]>([]);
   const [importOpen, setImportOpen] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -423,11 +401,10 @@ export default function Data() {
     }
   }
 
-  type DataTab = 'siswa' | 'tabungan' | 'materi' | 'kelas';
+  type DataTab = 'siswa' | 'tabungan' | 'kelas';
   const tabs: { key: DataTab; label: string; icon: string }[] = [
     { key: 'siswa', label: 'Data Siswa', icon: 'fa-users' },
     { key: 'tabungan', label: 'Tabungan', icon: 'fa-wallet' },
-    { key: 'materi', label: 'Materi', icon: 'fa-book' },
     { key: 'kelas', label: 'Kelas', icon: 'fa-school' },
   ];
 
@@ -442,10 +419,10 @@ export default function Data() {
             </select>
             <i className="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
           </div>
-          {tab !== 'tabungan' && tab !== 'materi' && tab !== 'kelas' && tab !== 'guru' && (
+          {tab === 'siswa' && (
             <div className="flex gap-1">
-              <button onClick={() => downloadTemplate(tab === 'siswa' ? 'siswa' : tab === 'guru' ? 'siswa' : tab)} className="px-2.5 py-2 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-colors" title="Download Template"><i className="fas fa-download mr-1"></i>Template</button>
-              <button onClick={() => exportData(tab === 'siswa' ? 'siswa' : tab === 'guru' ? 'siswa' : tab, selectedClass)} className="px-2.5 py-2 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-colors" title="Export Excel"><i className="fas fa-file-export mr-1"></i>Export</button>
+               <button onClick={() => downloadTemplate('siswa')} className="px-2.5 py-2 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-colors" title="Download Template"><i className="fas fa-download mr-1"></i>Template</button>
+              <button onClick={() => exportData('siswa', selectedClass)} className="px-2.5 py-2 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-colors" title="Export Excel"><i className="fas fa-file-export mr-1"></i>Export</button>
               <button onClick={() => setImportOpen(true)} className="px-2.5 py-2 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-colors" title="Import Excel"><i className="fas fa-file-import mr-1"></i>Import</button>
             </div>
           )}
@@ -463,7 +440,6 @@ export default function Data() {
 
       {tab === 'siswa' && <DataSiswaTab key={selectedClass} selectedClass={selectedClass} adminMode={isAdm} teachers={teachers} />}
       {tab === 'tabungan' && <TabunganTab key={selectedClass} selectedClass={selectedClass} />}
-      {tab === 'materi' && <MateriTab />}
       {tab === 'kelas' && <KelasTab />}
 
       <Modal open={importOpen} onClose={() => { if (!importing) { setImportOpen(false); setImportResult(null); } }} title="Import Data dari Excel">

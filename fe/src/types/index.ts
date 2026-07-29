@@ -103,13 +103,57 @@ export interface KasUmum {
   keterangan?: string;
 }
 
+export interface Soal {
+  id?: string;
+  tipe: 'pilihan_ganda' | 'essay' | 'pilgan_kompleks' | 'menjodohkan' | 'benar_salah' | 'isian';
+  pertanyaan: string;
+  opsi?: string[];
+  pasangan_kiri?: string[];
+  pasangan_kanan?: string[];
+  jawaban: string | string[] | boolean | { kiri: number; kanan: number }[];
+  poin?: number;
+  pedoman_penskoran?: string;
+}
+
 export interface Materi {
   id: number;
   teacher_id: number;
   title: string;
-  url: string;
+  url?: string;
   type: string;
+  konten?: string;
+  soal?: Soal[];
+  topik?: string;
+  mapel?: string;
+  kelas?: string;
+  tingkat_kesulitan?: string;
+  durasi?: number;
+  generate_params?: Record<string, unknown>;
   uploaded_at: string;
+}
+
+export type PageType = 'dashboard' | 'agenda' | 'absensi' | 'nilai' | 'penilaian-semester' | 'jadwal-pelajaran' | 'materi' | 'data' | 'kalender' | 'settings' | 'profile' | 'admin-dashboard' | 'admin-users' | 'admin-academic-years' | 'admin-semesters' | 'admin-subjects' | 'admin-logs' | 'admin-announcements';
+
+export interface PushSubscription {
+  id: number;
+  user_id: number;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_agent?: string;
+  created_at: string;
+}
+
+export interface Announcement {
+  id: number;
+  title: string;
+  content?: string;
+  target_role?: string;
+  created_by: number;
+  created_by_user?: { name: string };
+  sent_at?: string;
+  read_at?: string;
+  created_at: string;
 }
 
 export interface CalendarEvent {
@@ -165,8 +209,6 @@ export interface TimetableEntry {
   room: string;
   subjects?: { name: string; code: string } | null;
 }
-
-export type PageType = 'dashboard' | 'agenda' | 'absensi' | 'nilai' | 'penilaian-semester' | 'jadwal-pelajaran' | 'data' | 'kalender' | 'settings' | 'profile' | 'admin-dashboard' | 'admin-users' | 'admin-academic-years' | 'admin-semesters' | 'admin-subjects' | 'admin-logs';
 
 export interface AcademicYear {
   id: number;

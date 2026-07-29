@@ -55,15 +55,6 @@ const DATA_ITEMS = [
     importCacheKey: [],
   },
   {
-    key: 'materi', icon: 'fa-book', label: 'Materi', desc: 'Judul, URL, tipe (link/video/dokumen)',
-    headers: ['Judul', 'URL', 'Tipe'],
-    sample: ['Materi Pecahan', 'https://contoh.com/pecahan', 'link'],
-    exportCols: [{ key: 'title', label: 'Judul' }, { key: 'url', label: 'URL' }, { key: 'type', label: 'Tipe' }],
-    importEndpoint: '/materi',
-    importMapRow: (r: any) => ({ title: r['Judul'], url: r['URL'], type: r['Tipe'] || 'link' }),
-    importCacheKey: ['materi'],
-  },
-  {
     key: 'tabungan', icon: 'fa-wallet', label: 'Tabungan', desc: 'Riwayat setor/tarik per tanggal',
     headers: ['ID Siswa', 'Tanggal', 'Uang Masuk', 'Uang Keluar'],
     sample: ['1234567890', '2026-01-15', '5000', '0'],
@@ -121,11 +112,6 @@ function ExportImportTab() {
     queryFn: async () => { const { data } = await apiClient.get('/auth/users'); return (data.success ? data.data : []) as User[]; },
     enabled: isAdm,
   });
-  const { data: materiList = [] } = useQuery({
-    queryKey: ['settings-materi'],
-    queryFn: async () => { const { data } = await apiClient.get('/materi'); return data.data as any[]; },
-  });
-
   const runExport = async (key: string) => {
     const item = DATA_ITEMS.find(i => i.key === key);
     if (!item) return;
@@ -153,7 +139,7 @@ function ExportImportTab() {
       return;
     }
 
-    const dataMap: Record<string, any[]> = { siswa: students, guru: guruList, materi: materiList, kalender: makeCalExportRows() };
+    const dataMap: Record<string, any[]> = { siswa: students, guru: guruList, kalender: makeCalExportRows() };
     const data = dataMap[key] || [];
     exportXLSX(data, `${key === 'kalender' ? 'kalender-pendidikan' : key === 'siswa' ? `data-${key}-${selectedClass}` : `data-${key}`}`, item.exportCols);
   };
@@ -343,7 +329,54 @@ function ProfileTab() {
           Keluar
         </Button>
       </Card>
+
+      <ChangePasswordForm />
     </div>
+  );
+}
+
+function ChangePasswordForm() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) { toast.error('Konfirmasi password tidak cocok'); return; }
+    if (newPassword.length < 6) { toast.error('Password minimal 6 karakter'); return; }
+    setLoading(true);
+    try {
+      await apiClient.post('/auth/change-password', { currentPassword, newPassword });
+      toast.success('Password berhasil diubah');
+      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Gagal mengubah password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card>
+      <h3 className="font-semibold text-sm mb-4">Ganti Password</h3>
+      <div className="space-y-4">
+        <div>
+          <label className="label">Password Saat Ini</label>
+          <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="input-field" placeholder="******" />
+        </div>
+        <div>
+          <label className="label">Password Baru</label>
+          <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input-field" placeholder="Minimal 6 karakter" />
+        </div>
+        <div>
+          <label className="label">Konfirmasi Password Baru</label>
+          <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="input-field" placeholder="******" />
+        </div>
+        <Button onClick={handleChangePassword} disabled={loading || !currentPassword || !newPassword || !confirmPassword} loading={loading}>
+          Simpan Password
+        </Button>
+      </div>
+    </Card>
   );
 }
 
@@ -352,6 +385,11 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+
+      <div>
+        <h1 className="text-xl font-bold tracking-tight">Pengaturan</h1>
+        <p className="text-sm text-text-tertiary mt-1">Kelola data, ekspor/impor, dan pengaturan akun</p>
+      </div>
 
       <div className="flex gap-1 bg-white rounded-2xl p-1.5 border border-black/[0.06] overflow-x-auto">
         {[

@@ -130,29 +130,63 @@ export default function AdminDashboard() {
 
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
-              </div>
-              <span className="text-[11px] font-mono text-text-tertiary">aktivitas.log</span>
-            </div>
-            <button onClick={() => navigate('/app/admin/logs')} className="text-[11px] font-mono text-primary hover:underline">cat <i className="fas fa-arrow-right ml-1"></i></button>
+            <h2 className="section-title text-sm">Aktivitas</h2>
+            <button onClick={() => navigate('/app/admin/logs')} className="text-xs text-primary font-medium hover:underline">Lihat Semua <i className="fas fa-arrow-right ml-1"></i></button>
           </div>
-          <div className="font-mono text-[12px] leading-relaxed space-y-1 max-h-[400px] overflow-y-auto">
+          <div className="divide-y divide-gray-50 max-h-[400px] overflow-y-auto">
             {data?.recent_logs?.map((log) => (
-              <div key={log.id} className="flex items-start gap-2 px-1 py-1 hover:bg-surface-secondary rounded-lg transition-colors">
-                <span className="text-text-tertiary select-none shrink-0">$</span>
-                <span className="text-text-tertiary shrink-0 whitespace-nowrap">[{new Date(log.created_at).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit' })}]</span>
-                <span className="text-primary font-semibold shrink-0">{log.user_name}</span>
-                <span className="text-text-primary">{log.action} {log.entity_type}{log.entity_id ? ` #${log.entity_id}` : ''}</span>
+              <div key={log.id} className="flex items-start gap-2.5 py-2 hover:bg-surface-secondary rounded-lg transition-colors px-1">
+                <div className="w-7 h-7 rounded-full bg-surface-secondary flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <i className={`fas text-[10px] ${
+                    log.action === 'LOGIN' ? 'fa-right-to-bracket' :
+                    log.action === 'LOGOUT' ? 'fa-right-from-bracket' :
+                    log.action === 'CREATE' ? 'fa-plus' :
+                    log.action === 'UPDATE' ? 'fa-pen' :
+                    log.action === 'DELETE' ? 'fa-trash' :
+                    log.action === 'SEARCH' ? 'fa-search' :
+                    log.action === 'VIEW' || log.action === 'READ' ? 'fa-eye' :
+                    log.action === 'EXPORT' ? 'fa-download' :
+                    log.action === 'IMPORT' ? 'fa-upload' :
+                    'fa-circle'
+                  } ${
+                    log.action === 'DELETE' ? 'text-danger' :
+                    log.action === 'CREATE' ? 'text-green-600' :
+                    log.action === 'UPDATE' ? 'text-blue-600' :
+                    log.action === 'LOGIN' ? 'text-purple-600' :
+                    'text-text-tertiary'
+                  }`}></i>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate">{log.user_name} <span className="text-text-tertiary font-normal">· {new Date(log.created_at).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}</span></p>
+                  <p className="text-[11px] text-text-tertiary mt-0.5">
+                    {log.action === 'LOGIN' ? 'Login' :
+                     log.action === 'LOGOUT' ? 'Logout' :
+                     log.action === 'CREATE' ? 'Menambah' :
+                     log.action === 'UPDATE' ? 'Mengubah' :
+                     log.action === 'DELETE' ? 'Menghapus' :
+                     log.action === 'SEARCH' ? 'Mencari' :
+                     log.action === 'EXPORT' ? 'Mengexport' :
+                     log.action === 'IMPORT' ? 'Mengimport' :
+                     log.action} {log.entity_type}{log.entity_id ? ' #'+log.entity_id : ''}
+                  </p>
+                </div>
+                <span className={`inline-block px-1.5 py-0.5 rounded-full text-[9px] font-semibold flex-shrink-0 ${
+                  log.action === 'CREATE' ? 'bg-emerald-100 text-emerald-700' :
+                  log.action === 'UPDATE' ? 'bg-blue-100 text-blue-700' :
+                  log.action === 'DELETE' ? 'bg-red-100 text-red-700' :
+                  log.action === 'LOGIN' ? 'bg-purple-100 text-purple-700' :
+                  log.action === 'LOGOUT' ? 'bg-gray-100 text-gray-500' :
+                  log.action === 'SEARCH' ? 'bg-amber-100 text-amber-700' :
+                  log.action === 'EXPORT' ? 'bg-indigo-100 text-indigo-700' :
+                  log.action === 'IMPORT' ? 'bg-orange-100 text-orange-700' :
+                  'bg-yellow-100 text-yellow-700'
+                }`}>{log.action}</span>
               </div>
             ))}
             {(!data?.recent_logs || data.recent_logs.length === 0) && (
               <div className="text-center py-8 text-text-tertiary">
-                <p className="font-mono text-xs">tidak ada aktivitas</p>
-                <p className="font-mono text-[10px] mt-1">~$ _</p>
+                <i className="fas fa-history text-xl mb-2"></i>
+                <p className="text-xs">Belum ada aktivitas</p>
               </div>
             )}
           </div>
