@@ -47,31 +47,14 @@ function DataSiswaTab({ selectedClass, adminMode, teachers }: { selectedClass: s
         {saveStatus !== 'idle' && <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${saveStatus === 'saving' ? 'bg-soft-purple text-primary' : saveStatus === 'saved' ? 'bg-soft-green text-green-600' : 'bg-red-50 text-red-500'}`}>{saveStatus === 'saving' ? 'Menyimpan...' : saveStatus === 'saved' ? 'Tersimpan' : 'Gagal'}</span>}
       </div>
 
-      <Card>
-        <h3 className="font-semibold text-sm mb-3">Tambah Siswa Baru</h3>
-        <div className="flex gap-3 flex-wrap">
-          {adminMode && (
-            <div className="relative w-full sm:w-auto">
-              <select value={selectedTeacher} onChange={e => setSelectedTeacher(parseInt(e.target.value))} className="select-field">
-                {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-              <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
-            </div>
-          )}
-          <input type="text" placeholder="NIS" value={newStudent.student_id} onChange={e => setNewStudent(s => ({ ...s, student_id: e.target.value }))} className="input-field flex-1" />
-          <input type="text" placeholder="Nama Lengkap" value={newStudent.name} onChange={e => setNewStudent(s => ({ ...s, name: e.target.value }))} className="input-field flex-1" />
-          <Button onClick={() => { if (newStudent.student_id && newStudent.name && selectedClass) { const payload: any = { ...newStudent, class: selectedClass }; if (adminMode && selectedTeacher) payload.teacher_id = selectedTeacher; createMutation.mutate(payload); setNewStudent({ student_id: '', name: '' }); } }} disabled={!newStudent.student_id || !newStudent.name || !selectedClass}>Tambah</Button>
-        </div>
-      </Card>
-
       <Card padding={false} className="overflow-hidden">
         <div className="overflow-x-auto">
           {changes.size > 0 && <div className="flex items-center gap-2 px-5 py-3 text-xs text-amber-600 bg-amber-50 border-b border-black/[0.06]"><i className="fas fa-circle text-[6px]"></i>{changes.size} siswa diubah</div>}
           <table className="min-w-full">
             <thead>
               <tr className="bg-surface-secondary">
-                <th className="table-header sticky left-0 bg-surface-secondary z-10 min-w-[80px]">NIS</th>
-                <th className="table-header sticky left-[80px] bg-surface-secondary z-10 min-w-[140px]">Nama</th>
+                <th className="table-header min-w-[70px]">NIS</th>
+                <th className="table-header min-w-[100px] sm:min-w-[140px]">Nama</th>
                 <th className="table-header min-w-[120px]">Alamat</th>
                 <th className="table-header min-w-[100px]">Tgl Lahir</th>
                 <th className="table-header min-w-[100px]">Ayah</th>
@@ -89,8 +72,8 @@ function DataSiswaTab({ selectedClass, adminMode, teachers }: { selectedClass: s
                 const isChanged = changes.has(s.id);
                 return (
                   <tr key={s.id} className={`hover:bg-surface-secondary transition-colors ${isChanged ? 'bg-amber-50/30' : ''}`}>
-                    <td className="table-cell sticky left-0 bg-white z-10 font-mono text-xs">{s.student_id}</td>
-                    <td className="table-cell sticky left-[80px] bg-white z-10 font-medium">
+                    <td className="table-cell font-mono text-xs">{s.student_id}</td>
+                    <td className="table-cell font-medium">
                       <div className="flex items-center gap-1">{isChanged && <i className="fas fa-circle text-[6px] text-amber-400"></i>}<input className="bg-transparent border-b border-transparent focus:border-primary focus:outline-none py-1 min-w-[100px]" value={ch.name ?? s.name} onChange={(e) => handleChange(s.id, 'name', e.target.value)} /></div>
                     </td>
                     <td className="table-cell"><input className="bg-transparent border-b border-transparent focus:border-primary focus:outline-none py-1 min-w-[100px]" value={ch.address ?? s.address ?? ''} onChange={(e) => handleChange(s.id, 'address', e.target.value)} /></td>
@@ -267,9 +250,11 @@ function KelasTab() {
     <div className="space-y-4">
       <Card><h3 className="font-semibold text-sm mb-3">Tambah Kelas</h3><div className="flex gap-3"><input type="text" placeholder="Nama kelas (contoh: 7-1)" value={newName} onChange={e => setNewName(e.target.value)} className="input-field flex-1" /><Button onClick={addClass} disabled={!newName}>Tambah</Button></div></Card>
       <Card padding={false} className="overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="min-w-full"><thead><tr className="bg-surface-secondary"><th className="table-header">Kelas</th><th className="table-header text-center">Jumlah Siswa</th><th className="table-header text-center">Aksi</th></tr></thead>
           <tbody>{kelasList.map(k => (<tr key={k.name} className="hover:bg-surface-secondary transition-colors"><td className="table-cell font-medium">{editOrig === k.name ? <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="input-field w-24" autoFocus /> : k.name}</td><td className="table-cell text-center">{k.student_count}</td><td className="table-cell text-center">{editOrig === k.name ? <div className="flex gap-2 justify-center"><button onClick={renameClass} className="text-green-600 text-sm font-medium"><i className="fas fa-check mr-1"></i></button><button onClick={() => { setEditOrig(''); setEditName(''); }} className="text-text-tertiary text-sm"><i className="fas fa-times"></i></button></div> : <div className="flex gap-2 justify-center"><button onClick={() => { setEditOrig(k.name); setEditName(k.name); }} className="text-text-tertiary hover:text-primary"><i className="fas fa-edit"></i></button><button onClick={() => deleteClass(k.name)} className="text-text-tertiary hover:text-danger"><i className="fas fa-trash"></i></button></div>}</td></tr>))}</tbody>
         </table>
+        </div>
         {kelasList.length === 0 && <div className="text-center py-12 text-text-tertiary"><i className="fas fa-school text-2xl mb-2 block"></i>Belum ada kelas</div>}
       </Card>
     </div>

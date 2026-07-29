@@ -5,6 +5,7 @@ import { useImpersonation } from './context/ImpersonationContext';
 import Layout from './components/Layout';
 import AdminLayout from './components/AdminLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
@@ -58,7 +59,7 @@ export default function App() {
   return (
     <Routes>
       {/* Public pages */}
-      <Route path="/" element={<AuthGuard><Navigate to="/login" replace /></AuthGuard>} />
+      <Route path="/" element={<AuthGuard><LandingPage /></AuthGuard>} />
       <Route path="/login" element={<AuthGuard><LoginPage /></AuthGuard>} />
       <Route path="/register" element={<AuthGuard><RegisterPage /></AuthGuard>} />
       <Route path="/verify-email" element={<AuthGuard><VerifyEmailPage /></AuthGuard>} />

@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import toast from 'react-hot-toast';
-import { SemesterGrade, Subject } from '../types';
+import { SemesterGrade, Subject, AcademicYear } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useClasses } from '../hooks/useClasses';
 import { useAutoSave } from '../hooks/useAutoSave';
@@ -20,6 +20,12 @@ export default function PenilaianSemester() {
   const [selectedClass, setSelectedClass] = useState('');
   useEffect(() => { if (classes.length > 0 && !selectedClass) setSelectedClass(classes[0]); }, [classes, selectedClass]);
   const [semester, setSemester] = useState<'Ganjil' | 'Genap'>(() => { const m = new Date().getMonth() + 1; return m >= 7 ? 'Ganjil' : 'Genap'; });
+  const [tahunAjaran, setTahunAjaran] = useState('');
+  const { data: academicYears = [] } = useQuery({
+    queryKey: ['academic-years'],
+    queryFn: async () => { const { data } = await apiClient.get('/academic-years'); return (data.data || []) as AcademicYear[]; },
+  });
+  useEffect(() => { if (academicYears.length > 0 && !tahunAjaran) setTahunAjaran(String(academicYears.find(y => y.is_active)?.id || academicYears[0].id)); }, [academicYears, tahunAjaran]);
   const [selectedSubject, setSelectedSubject] = useState('');
   const changesRef = useRef<Map<string, { sts: string; sas: string; student_id: string; semester: string }>>(new Map());
   const [, forceRender] = useState(0);
@@ -36,10 +42,10 @@ export default function PenilaianSemester() {
   }, [user?.teacher_subjects, allSubjects]);
 
   const { data: semesterData = [], isFetching } = useQuery({
-    queryKey: ['semester-grades', selectedClass, semester, selectedSubject],
+    queryKey: ['semester-grades', selectedClass, semester, tahunAjaran, selectedSubject],
     queryFn: async () => {
       const subjectId = allSubjects.find(s => s.code === selectedSubject)?.id;
-      const params = `class=${selectedClass}&semester=${semester}${subjectId ? `&subject_id=${subjectId}` : ''}`;
+      const params = `class=${selectedClass}&semester=${semester}&academic_year_id=${tahunAjaran}${subjectId ? `&subject_id=${subjectId}` : ''}`;
       const { data } = await apiClient.get(`/grades/semester?${params}`);
       return data.data as SemesterGrade[];
     },
@@ -108,7 +114,7 @@ export default function PenilaianSemester() {
       </div>
 
       <Card>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">Kelas</label>
             <div className="relative">
@@ -137,8 +143,17 @@ export default function PenilaianSemester() {
             <label className="label">Semester</label>
             <div className="relative">
               <select value={semester} onChange={(e) => { setSemester(e.target.value as any); clearChanges(); }} className="select-field">
-                <option value="Ganjil">Semester Ganjil 2026/2027</option>
-                <option value="Genap">Semester Genap 2026/2027</option>
+                <option value="Ganjil">Ganjil</option>
+                <option value="Genap">Genap</option>
+              </select>
+              <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
+            </div>
+          </div>
+          <div>
+            <label className="label">Tahun Ajaran</label>
+            <div className="relative">
+              <select value={tahunAjaran} onChange={(e) => setTahunAjaran(e.target.value)} className="select-field">
+                {academicYears.map(y => <option key={y.id} value={y.id}>{y.name}</option>)}
               </select>
               <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
             </div>
@@ -152,9 +167,9 @@ export default function PenilaianSemester() {
             <table className="min-w-full">
               <thead>
                 <tr className="bg-surface-secondary">
-                  <th className="table-header sticky left-0 bg-surface-secondary z-10 min-w-[160px]">
+                  <th className="table-header sticky left-0 bg-surface-secondary z-10 min-w-[100px] sm:min-w-[160px]">
                     Nama Siswa
-                    <span className="block text-[10px] font-normal text-text-tertiary mt-0.5">Rumus: (HarianÃ—0.5)+(STSÃ—0.1)+(SASÃ—0.2)+(KehadiranÃ—0.2)</span>
+
                   </th>
                   <th className="table-header text-center w-24">Rata Harian</th>
                   <th className="table-header text-center w-24">Kehadiran</th>

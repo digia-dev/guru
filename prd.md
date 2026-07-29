@@ -1,10 +1,10 @@
 # PRD: AppGuru - Aplikasi Manajemen Guru (Versi Modern)
 
 **Dokumen:** Product Requirements Document (PRD)
-**Versi:** 2.0.0
-**Tanggal:** 2026-07-26
+**Versi:** 2.1.0
+**Tanggal:** 2026-07-29
 **Penulis:** Tim Pengembang AppGuru
-**Status:** Final
+**Status:** Updated
 
 ---
 
@@ -209,21 +209,24 @@ appguru.html (Monolitik ~5000 baris)
 │  │  │ Router  │ │ Query    │ │ (Chart library)   │  │  │
 │  │  └─────────┘ └──────────┘ └───────────────────┘  │  │
 │  └───────────────────────────────────────────────────┘  │
-│                          │ HTTP/HTTPS                    │
-│                          │ JWT Bearer Token              │
+│                    │ HTTP/HTTPS                    │
+│                    │ JWT Bearer Token              │
 └──────────────────────────┼──────────────────────────────┘
                            │
 ┌──────────────────────────┼──────────────────────────────┐
-│                Backend (be/)                             │
-│  Node.js + Express + TypeScript                          │
-│  ┌──────────────┐ ┌──────────────┐ ┌────────────────┐  │
-│  │ Auth         │ │ API Routes   │ │ Middleware      │  │
-│  │ (JWT)        │ │ (RESTful)    │ │ (Auth, Logging) │  │
-│  └──────────────┘ └──────────────┘ └────────────────┘  │
-│                          │                               │
-│                    ┌─────┴─────┐                        │
-│                    │ PostgreSQL │                        │
-│                    └───────────┘                        │
+│              Supabase (Hosted Backend)                    │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │  Edge Functions (Deno)                            │   │
+│  │  ┌──────────────┐ ┌──────────────┐               │   │
+│  │  │ auth (JWT)   │ │ grades       │               │   │
+│  │  │ students     │ │ attendance   │               │   │
+│  │  │ agenda       │ │ tabungan     │               │   │
+│  │  │ materi       │ │ backup       │               │   │
+│  │  └──────────────┘ └──────────────┘               │   │
+│  ├──────────────────────────────────────────────────┤   │
+│  │              PostgreSQL Database                   │   │
+│  │  (Managed by Supabase + pg_graphql)                │   │
+│  └──────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -240,31 +243,57 @@ fe/
 │   ├── api/
 │   │   └── client.ts         # Axios instance + interceptors
 │   ├── context/
-│   │   └── AuthContext.tsx    # JWT auth context provider
+│   │   ├── AuthContext.tsx    # JWT auth context provider
+│   │   └── ImpersonationContext.tsx
 │   ├── hooks/
 │   │   ├── useAuth.ts        # Auth hook
 │   │   ├── useCache.ts       # Local cache hook
-│   │   └── useAutoSave.ts    # Debounced auto-save hook
+│   │   ├── useAutoSave.ts    # Debounced auto-save hook
+│   │   ├── useClasses.ts     # Classes utility
+│   │   ├── useMutation.ts    # Optimistic mutation hook
+│   │   └── useKeyboardShortcuts.ts
+│   ├── utils/
+│   │   └── grades.ts         # Grade calculation helpers
 │   ├── components/
 │   │   ├── Layout.tsx        # Main layout (sidebar + content)
 │   │   ├── Sidebar.tsx       # Desktop sidebar navigation
+│   │   ├── TopHeader.tsx     # Mobile top header
 │   │   ├── BottomNav.tsx     # Mobile bottom navigation
 │   │   ├── FloatingSaveBtn.tsx
 │   │   ├── Modal.tsx         # Reusable modal component
 │   │   ├── QuoteCard.tsx     # Daily quote card
 │   │   ├── ProtectedRoute.tsx
+│   │   ├── Card.tsx          # Reusable card component
+│   │   ├── Button.tsx        # Reusable button component
+│   │   ├── AdminLayout.tsx   # Admin sub-layout
+│   │   ├── StudentDetailModal.tsx
 │   │   └── charts/
-│   │       ├── index.ts      # Chart exports
 │   │       └── AttendanceChart.tsx
 │   ├── pages/
-│   │   ├── Login.tsx
+│   │   ├── LandingPage.tsx   # Marketing landing page (/) — Unsplash images + parallax
+│   │   ├── LoginPage.tsx
+│   │   ├── RegisterPage.tsx
+│   │   ├── VerifyEmailPage.tsx
+│   │   ├── ForgotPasswordPage.tsx
+│   │   ├── ResetPasswordPage.tsx
 │   │   ├── Dashboard.tsx
 │   │   ├── Agenda.tsx
 │   │   ├── Absensi.tsx
 │   │   ├── Nilai.tsx
 │   │   ├── PenilaianSemester.tsx
+│   │   ├── AnalisisNilai.tsx  # Analytics dashboard with ranking
+│   │   ├── Materi.tsx
 │   │   ├── Data.tsx
-│   │   └── KalenderPendidikan.tsx
+│   │   ├── KalenderPendidikan.tsx
+│   │   ├── Settings.tsx       # Bobot nilai, backup/restore, tahun ajaran
+│   │   ├── Profile.tsx        # Edit nama, email, password
+│   │   └── admin/
+│   │       ├── AdminDashboard.tsx
+│   │       ├── UsersPage.tsx
+│   │       ├── AcademicYearsPage.tsx
+│   │       ├── SubjectsPage.tsx
+│   │       ├── LogsPage.tsx
+│   │       └── AnnouncementsPage.tsx
 │   └── types/
 │       └── index.ts          # Shared TypeScript interfaces
 ├── index.html
@@ -279,49 +308,68 @@ fe/
 ### 5.3 Backend Architecture
 
 ```
-be/
-├── src/
-│   ├── index.ts              # Entry point (Express app)
-│   ├── db/
-│   │   ├── pool.ts           # PostgreSQL connection pool
-│   │   └── schema.sql        # Complete database schema
-│   ├── middleware/
-│   │   └── auth.ts           # JWT verification middleware
-│   ├── routes/
-│   │   ├── auth.ts           # Login, register, refresh token
-│   │   ├── students.ts       # CRUD students
-│   │   ├── attendance.ts     # CRUD attendance
-│   │   ├── grades.ts         # CRUD grades
-│   │   ├── agenda.ts         # CRUD learning activities
-│   │   ├── tabungan.ts       # CRUD tabungan + kas umum
-│   │   └── materi.ts         # CRUD materi links
-│   └── types/
-│       └── index.ts          # Shared TypeScript interfaces
-├── package.json
-├── tsconfig.json
-├── .env.example
-└── .eslintrc.json
+supabase/functions/
+├── auth/                    # Edge Function: Auth & system endpoints
+│   └── index.ts             # Login, register, refresh, me, grade-weights, backup, restore
+├── students/
+│   └── index.ts             # CRUD students
+├── attendance/
+│   └── index.ts             # CRUD attendance + batch save
+├── grades/
+│   └── index.ts             # CRUD grades harian & semester
+├── activities/
+│   └── index.ts             # CRUD learning activities
+├── tabungan/
+│   └── index.ts             # CRUD tabungan
+├── kas-umum/
+│   └── index.ts             # CRUD kas umum
+├── materi/
+│   └── index.ts             # CRUD materi
+├── analytic/                # Analytics & dashboard
+│   └── index.ts             # Dashboard stats, grade analytics
+├── academic-years/
+│   └── index.ts             # CRUD academic years
+├── semesters/
+│   └── index.ts             # CRUD semesters
+├── subjects/
+│   └── index.ts             # CRUD subjects
+├── calendar/
+│   └── index.ts             # Calendar events
+├── notifications/
+│   └── index.ts             # Push notifications
+└── _shared/
+    ├── cors.ts              # CORS headers
+    └── supabase.ts          # Supabase client
 ```
 
-### 5.4 Dual Repository Strategy
+### 5.3 Database Hosting: Supabase
+
+PostgreSQL managed by Supabase with:
+- Auto-generated REST API via pg_graphql
+- Row Level Security (RLS) for multi-tenant data isolation
+- Built-in authentication (Supabase Auth)
+- Real-time subscriptions for live updates
+- Database backups & point-in-time recovery
+
+### 5.4 Project Structure
 
 ```
 appguru/
-├── fe/                    # Frontend repository
-│   ├── package.json       # React dependencies
-│   ├── vite.config.ts     # Vite configuration
-│   ├── ...
-│   └── .git
+├── fe/                    # Frontend (Vite + React + TypeScript)
+│   ├── public/            # Static assets
+│   ├── src/               # Source code
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── tsconfig.json
+│   └── tailwind.config.js
 │
-├── be/                    # Backend repository
-│   ├── package.json       # Express dependencies
-│   ├── tsconfig.json      # TypeScript configuration
-│   ├── ...
-│   └── .git
+├── supabase/              # Supabase backend
+│   └── functions/         # Edge Functions (Deno)
 │
-├── core.js                # Shared utility (client-side)
+├── appguru_ui.tsx         # Original landing page design mockup
 ├── prd.md                 # This document
-├── appguru.html           # Original v1 file
+├── AGENTS.md              # Agent instructions
+├── CHECK.md               # Review checklist
 └── README.md
 ```
 
@@ -346,50 +394,56 @@ appguru/
 | XLSX (SheetJS) | ^0.20 | Excel Export |
 | react-hot-toast | ^2.4 | Toast Notifications |
 | date-fns | ^3.6 | Date Utilities |
+| lucide-react | ^0.460 | SVG Icon Library |
 | clsx | ^2.1 | Classname utility |
 
 ### 6.2 Backend Stack
 
 | Teknologi | Versi | Kegunaan |
 |-----------|-------|----------|
-| Node.js | ^20.11 | Runtime |
-| Express | ^4.19 | Web Framework |
-| TypeScript | ^5.4 | Type Safety |
-| pg (node-postgres) | ^8.12 | PostgreSQL Driver |
-| jsonwebtoken | ^9.0 | JWT Generation & Verification |
-| bcryptjs | ^2.4 | Password Hashing |
-| zod | ^3.22 | Request Validation |
-| cors | ^2.8 | CORS Middleware |
-| helmet | ^7.1 | Security Headers |
-| morgan | ^1.10 | HTTP Logging |
-| dotenv | ^16.4 | Environment Variables |
-| tsx | ^4.7 | TypeScript Execution |
-| jest | ^29.7 | Testing |
-| supertest | ^6.3 | HTTP Testing |
+| Supabase | - | Hosted PostgreSQL + Auth + Edge Functions |
+| Deno | ^2 | Edge Functions Runtime |
+| TypeScript | ^5 | Type Safety |
+| Supabase JS Client | ^2 | Database & Auth Client |
+| JWT | - | Authentication (Supabase-managed) |
+| pg_graphql | - | Auto-generated GraphQL API |
 
 ### 6.3 Database Stack
 
 | Teknologi | Versi | Kegunaan |
 |-----------|-------|----------|
-| PostgreSQL | ^16 | Relational Database |
-| pgAdmin | ^8 | Database Management |
-| Supabase | ^2 | Hosted PostgreSQL + Auth |
+| PostgreSQL | ^16 | Relational Database (Supabase-managed) |
+| Supabase Studio | - | Database Management UI |
 
 ### 6.4 DevOps Stack
 
 | Teknologi | Versi | Kegunaan |
 |-----------|-------|----------|
-| Docker | ^25 | Containerization |
-| GitHub Actions | - | CI/CD Pipeline |
+| Supabase CLI | - | Local dev, migrations, function deploy |
 | Vercel | - | Frontend Hosting |
-| Railway / Render | - | Backend Hosting |
-| Neon / Supabase | - | PostgreSQL Hosting |
+| Supabase | - | Backend + Database Hosting |
 
 ---
 
 ## 7. Fitur-Fitur
 
 ### 7.1 Fitur Inti (MVP)
+
+#### F0: Landing Page (Marketing Page)
+- **ID:** F-000
+- **Deskripsi:** Halaman marketing utama di route `/`
+- **Kompleksitas:** Low
+- **Priority:** P0
+- **Detail:**
+  - Full-bleed hero section dengan gambar real (Unsplash)
+  - Efek parallax scroll pada background
+  - Reveal animations saat scroll (IntersectionObserver)
+  - Stats strip (counter angka pengguna)
+  - Feature cards dengan foto thumbnail (2 kolom grid)
+  - CTA section dengan parallax background
+  - Tombol navigasi ke `/login` dan `/register`
+  - Sticky navbar dengan glassmorphism
+  - Jika sudah login, redirect otomatis ke `/app`
 
 #### F1: Autentikasi & Login
 - **ID:** F-001
@@ -528,7 +582,44 @@ appguru/
   - Hapus materi
   - Link terbuka di tab baru
 
-#### F10: Kalender Pendidikan
+#### F10: Pengaturan & Bobot Nilai
+- **ID:** F-010
+- **Deskripsi:** Halaman settings untuk manajemen data dan konfigurasi
+- **Kompleksitas:** Medium
+- **Priority:** P1
+- **Detail:**
+  - Card Template/Export/Import untuk tiap data (Siswa, Kalender, Materi)
+  - Bobot Nilai: input 3 komponen (Harian, STS, SAS) dengan validasi total 100%
+  - Tampilan Tahun Ajaran aktif (nama, semester, periode) — data dari API /academic-years
+  - Backup & Restore: download JSON semua data user, upload file JSON untuk restore
+  - Grade weights disimpan via `PUT /auth/grade-weights`, diambil via `GET /auth/grade-weights`
+  - Backup endpoint: `GET /auth/backup` (return JSON), `POST /auth/restore` (upload JSON)
+
+#### F11: Profile (Edit Akun)
+- **ID:** F-011
+- **Deskripsi:** Edit profil pengguna (nama, email, password)
+- **Kompleksitas:** Low
+- **Priority:** P2
+- **Detail:**
+  - Toggle edit mode untuk nama dan email
+  - Verifikasi password saat ini sebelum perubahan
+  - Update via `PUT /auth/me`
+
+#### F12: Analisis Nilai
+- **ID:** F-012
+- **Deskripsi:** Dashboard analitik nilai siswa
+- **Kompleksitas:** Medium
+- **Priority:** P1
+- **Detail:**
+  - Filter kelas, semester, tahun ajaran, mata pelajaran
+  - Summary cards: Total Siswa, KKM, Di Bawah KKM, Rata-rata Kelas
+  - Rata-rata Kelas (6 komponen: Pengetahuan, Keterampilan, Sikap, STS, SAS, Total Rata-rata)
+  - Ranking siswa (list ringkas tanpa progress bar)
+  - Ranking table detail (rank, nama, pengetahuan, keterampilan, sikap, STS, SAS, rata-rata)
+  - Deteksi siswa di bawah KKM (warna merah)
+  - Data dari `GET /analytics`
+
+#### F13: Kalender Pendidikan
 - **ID:** F-010
 - **Deskripsi:** Kalender akademik interaktif
 - **Kompleksitas:** Medium
@@ -635,6 +726,20 @@ appguru/
 
 ## 8. Halaman / Page Descriptions
 
+### 8.0 Landing Page
+
+**Route:** `/`
+**Layout:** Full-width marketing page, no sidebar
+**Auth:** Public (redirect ke /app jika sudah login)
+
+**Komponen:**
+- Sticky navbar (logo, Masuk, Daftar Gratis)
+- Hero section (full-screen image dengan parallax, headline, CTA, badges)
+- Stats strip (250+ sekolah, 5.000+ guru, dll)
+- Features grid (2 kolom, card dengan foto thumbnail)
+- CTA section (parallax image + tombol daftar)
+- Footer (logo, copyright)
+
 ### 8.1 Login Page
 
 **Route:** `/login`
@@ -657,7 +762,7 @@ appguru/
 
 ### 8.2 Dashboard
 
-**Route:** `/`
+**Route:** `/app`
 **Layout:** Main layout (sidebar + content)
 **Auth:** Protected
 
@@ -732,14 +837,13 @@ appguru/
 **Auth:** Protected
 
 **Komponen:**
-- Class filter
-- Semester filter
-- BAB filter chips
-- Export button
+- Filter grid (grid-cols-2): Kelas, Semester, Tahun Ajaran, Mata Pelajaran
+- BAB chip buttons (1 baris: Semua BAB, BAB 1-4)
 - Grade table with inputs
 - Auto-calculated averages
 - Floating save button
 - Keyboard navigation
+- Save indicator (saving/saved/error)
 
 **States:**
 - **Loading:** Table skeleton
@@ -755,13 +859,12 @@ appguru/
 **Auth:** Protected
 
 **Komponen:**
-- Class filter
-- Semester filter
-- Export button
-- Semester grade table
+- Filter grid (grid-cols-2): Kelas, Mata Pelajaran, Semester, Tahun Ajaran
+- Semester grade table (Nama, Rata Harian, Kehadiran, STS, SAS, Nilai Rapor)
 - Input for STS and SAS
-- Auto-calculated values
+- Auto-calculated: Rata Harian, Nilai Rapor
 - Floating save button
+- Save indicator
 
 **States:**
 - **Loading:** Table skeleton
@@ -774,15 +877,17 @@ appguru/
 **Layout:** Main layout
 **Auth:** Protected
 
-**Sub-pages (tabs):**
-1. **Data Siswa (Wali Kelas):** Editable table, export
-2. **Tabungan Siswa:** Summary, list, FAB actions
-3. **Materi:** Add form, list with delete
+**Content:**
+- Editable table semua siswa di kelas yang dipilih (NIS, Nama, Alamat, Tgl Lahir, Ayah, Ibu, No HP, Catatan)
+- Inline cell editing dengan tombol simpan batch
+- Horizontal scroll pada mobile (NIS + Nama ikut scroll)
+- Export/Import Excel
+- Filter kelas
 
-**States per tab:**
-- **Loading:** Tab content skeleton
-- **Empty:** "Belum ada data" message
-- **Error:** Error message per tab
+**States:**
+- **Loading:** Table skeleton
+- **Empty:** "Belum ada siswa" message
+- **Error:** Error message
 
 ### 8.8 Kalender Pendidikan Page
 
@@ -791,18 +896,16 @@ appguru/
 **Auth:** Protected
 
 **Komponen:**
-- Calendar slider (13 months)
-- Day indicators with event colors
-- Event legend
-- Event list (desktop, synced via Intersection Observer)
-- Navigation arrows (desktop)
-- Mobile event list per month
+- Calendar grid (13 months: Juli - Juli)
+- Day indicators with event color dots
+- Legend warna di bawah section Acara
+- Acara list per bulan (di bawah kalender)
+- Template/Export/Import button (di bawah Acara)
 
 **States:**
 - **Loading:** Calendar skeleton
 - **Empty:** "Tidak ada acara" per bulan
 - **Error:** Error message
-- **Scroll:** Optimistic UI untuk slider
 
 ---
 
@@ -953,57 +1056,73 @@ US-034: Sebagai guru, saya ingin AI membuat catatan rapor
 ### 10.1 Entity Relationship Diagram (ERD)
 
 ```
-┌─────────────┐     ┌──────────────────┐     ┌──────────────┐
-│   users     │     │   students       │     │  attendance  │
-├─────────────┤     ├──────────────────┤     ├──────────────┤
-│ id (PK)     │◄──┐ │ id (PK)          │◄┐   │ id (PK)      │
-│ email       │    └─│ teacher_id (FK)  │ └───│ student_id   │
-│ password    │      │ student_id (uniq)│     │ event_date   │
-│ name        │      │ name             │     │ class        │
-│ role        │      │ class            │     │ keterangan   │
-│ created_at  │      │ address          │     │ teacher_id   │
-└─────────────┘      │ dob              │     │ timestamp    │
-                     │ father_name      │     └──────────────┘
-                     │ father_job       │
-                     │ mother_name      │     ┌──────────────┐
-                     │ mother_job       │     │   grades     │
-                     │ phone            │     ├──────────────┤
-                     │ notes            │     │ id (PK)      │
-                     │ created_at       │◄┐   │ student_id   │
-                     └──────────────────┘ └───│ teacher_id   │
-                                              │ semester     │
-┌─────────────┐     ┌──────────────────┐     │ bab_1 (jsonb)│
-│ activities  │     │   tabungan       │     │ bab_2 (jsonb)│
-├─────────────┤     ├──────────────────┤     │ bab_3 (jsonb)│
-│ id (PK)     │     │ id (PK)          │     │ bab_4 (jsonb)│
-│ teacher_id  │     │ student_id       │     │ pengetahuan  │
-│ event_date  │     │ tanggal          │     │ keterampilan │
-│ class       │     │ uang_masuk       │     │ sikap_jujur  │
-│ waktu_mulai │     │ uang_keluar      │     │ sikap_disiplin│
-│ waktu_selesai│     │ teacher_id       │     │ sikap_tgg_jwb│
-│ catatan     │     │ timestamp        │     │ sts          │
-│ created_at  │     └──────────────────┘     │ sas          │
-└─────────────┘                              │ timestamp    │
-                    ┌──────────────────┐     └──────────────┘
-                    │ kas_umum_tabungan│
-                    ├──────────────────┤     ┌──────────────┐
-                    │ id (PK)          │     │   materi     │
-                    │ teacher_id       │     ├──────────────┤
-                    │ tanggal          │     │ id (PK)      │
-                    │ jumlah           │     │ teacher_id   │
-                    │ keterangan       │     │ title        │
-                    │ timestamp        │     │ url          │
-                    └──────────────────┘     │ type         │
-                                             │ uploaded_at  │
-                    ┌──────────────────┐     └──────────────┘
-                    │ calendar_events  │
-                    ├──────────────────┤
-                    │ id (PK)          │
-                    │ event_date       │
-                    │ jenis            │
-                    │ event_type       │
-                    │ color_class      │
-                    └──────────────────┘
+┌────────────────┐     ┌──────────────────┐     ┌────────────────┐
+│    users       │     │   students       │     │   attendance   │
+├────────────────┤     ├──────────────────┤     ├────────────────┤
+│ id (PK)        │◄─┐ │ id (PK)          │◄┐   │ id (PK)        │
+│ email (uniq)   │  └─│ teacher_id (FK)  │ └───│ student_id (FK)│
+│ password_hash  │    │ student_id (uniq)│     │ event_date     │
+│ name           │    │ name             │     │ class          │
+│ role           │    │ class            │     │ keterangan     │
+│ teacher_classes│    │ address          │     │ teacher_id (FK)│
+│ avatar_url     │    │ dob              │     │ created_at     │
+│ created_at     │    │ father_name      │     └────────────────┘
+└────────────────┘    │ father_job       │
+                      │ mother_name      │     ┌────────────────┐
+                      │ mother_job       │     │   grades       │
+                      │ phone            │     ├────────────────┤
+                      │ notes            │     │ id (PK)        │
+                      │ created_at       │◄┐   │ student_id (FK)│
+                      └──────────────────┘ └───│ teacher_id (FK)│
+                                                │ semester       │
+┌────────────────┐     ┌──────────────────┐     │ academic_year  │
+│  activities    │     │   tabungan       │     │ bab_1 (jsonb)  │
+├────────────────┤     ├──────────────────┤     │ bab_2 (jsonb)  │
+│ id (PK)        │     │ id (PK)          │     │ bab_3 (jsonb)  │
+│ teacher_id (FK)│     │ teacher_id (FK)  │     │ bab_4 (jsonb)  │
+│ event_date     │     │ student_id (FK)  │     │ pengetahuan   │
+│ class          │     │ tanggal          │     │ keterampilan  │
+│ waktu_mulai    │     │ uang_masuk       │     │ sikap_jujur   │
+│ waktu_selesai  │     │ uang_keluar      │     │ sikap_disiplin│
+│ catatan        │     │ created_at       │     │ sikap_tgg_jwb │
+│ created_at     │     └──────────────────┘     │ sts           │
+└────────────────┘                              │ sas           │
+                      ┌──────────────────┐     │ created_at    │
+                      │ kas_umum_tabungan│     └────────────────┘
+                      ├──────────────────┤
+                      │ id (PK)          │     ┌────────────────┐
+                      │ teacher_id (FK)  │     │   materi       │
+                      │ tanggal          │     ├────────────────┤
+                      │ jumlah           │     │ id (PK)        │
+                      │ keterangan       │     │ teacher_id (FK)│
+                      │ created_at       │     │ title          │
+                      └──────────────────┘     │ url            │
+                                                │ type           │
+┌────────────────┐     ┌──────────────────┐     │ uploaded_at    │
+│ calendar_events│     │   subjects       │     └────────────────┘
+├────────────────┤     ├──────────────────┤
+│ id (PK)        │     │ id (PK)          │     ┌────────────────┐
+│ teacher_id (FK)│     │ name (uniq)      │     │ grade_weights  │
+│ event_date     │     │ created_at       │     ├────────────────┤
+│ jenis          │     └──────────────────┘     │ id (PK)        │
+│ event_type     │                              │ teacher_id (FK)│
+│ color_class    │     ┌──────────────────┐     │ bobot_harian   │
+│ created_at     │     │  academic_years  │     │ bobot_sts      │
+└────────────────┘     ├──────────────────┤     │ bobot_sas      │
+                       │ id (PK)          │     │ created_at     │
+┌────────────────┐     │ name (uniq)      │     │ updated_at     │
+│  semesters     │     │ start_date       │     └────────────────┘
+├────────────────┤     │ end_date         │
+│ id (PK)        │     │ is_active        │     ┌────────────────┐
+│ academic_year  │◄────│ created_at       │     │ notifications  │
+│ name (Ganjil/  │     │ updated_at       │     ├────────────────┤
+│      Genap)    │     └──────────────────┘     │ id (PK)        │
+│ start_date     │                              │ teacher_id (FK)│
+│ end_date       │                              │ title          │
+└────────────────┘                              │ message        │
+                                                │ is_read        │
+                                                │ created_at     │
+                                                └────────────────┘
 ```
 
 ### 10.2 Tables Definition
@@ -1161,6 +1280,28 @@ US-034: Sebagai guru, saya ingin AI membuat catatan rapor
 | type | VARCHAR(20) | DEFAULT 'link' | Tipe materi |
 | uploaded_at | TIMESTAMP | DEFAULT NOW() | |
 
+#### Table: subjects
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | SERIAL | PRIMARY KEY | |
+| name | VARCHAR(100) | NOT NULL UNIQUE | Nama mapel |
+| created_at | TIMESTAMP | DEFAULT NOW() | |
+
+#### Table: grade_weights
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | SERIAL | PRIMARY KEY | |
+| teacher_id | INTEGER | FK -> users.id, UNIQUE | Guru |
+| bobot_harian | NUMERIC(5,2) | DEFAULT 0 | Bobot nilai harian (%) |
+| bobot_sts | NUMERIC(5,2) | DEFAULT 0 | Bobot STS (%) |
+| bobot_sas | NUMERIC(5,2) | DEFAULT 0 | Bobot SAS (%) |
+| created_at | TIMESTAMP | DEFAULT NOW() | |
+| updated_at | TIMESTAMP | DEFAULT NOW() | |
+
+**Constraint:** bobot_harian + bobot_sts + bobot_sas = 100
+
 #### Table: calendar_events
 
 | Column | Type | Constraints | Description |
@@ -1172,6 +1313,28 @@ US-034: Sebagai guru, saya ingin AI membuat catatan rapor
 | color_class | VARCHAR(50) | | Warna display |
 | is_global | BOOLEAN | DEFAULT true | Global untuk semua guru |
 
+#### Table: academic_years
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | SERIAL | PRIMARY KEY | |
+| name | VARCHAR(20) | NOT NULL UNIQUE | e.g. "2025/2026" |
+| start_date | DATE | NOT NULL | |
+| end_date | DATE | NOT NULL | |
+| is_active | BOOLEAN | DEFAULT false | Year aktif |
+| created_at | TIMESTAMP | DEFAULT NOW() | |
+| updated_at | TIMESTAMP | DEFAULT NOW() | |
+
+#### Table: semesters
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | SERIAL | PRIMARY KEY | |
+| academic_year_id | INTEGER | FK -> academic_years.id | Tahun ajaran |
+| name | VARCHAR(10) | NOT NULL | Ganjil / Genap |
+| start_date | DATE | NOT NULL | |
+| end_date | DATE | NOT NULL | |
+
 ---
 
 ## 11. API Endpoints
@@ -1180,13 +1343,23 @@ US-034: Sebagai guru, saya ingin AI membuat catatan rapor
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| POST | /api/auth/login | Login user | No |
-| POST | /api/auth/register | Register user | No |
-| POST | /api/auth/refresh | Refresh access token | No |
-| POST | /api/auth/logout | Logout user | Yes |
-| GET | /api/auth/me | Get current user | Yes |
+| POST | /auth/login | Login user | No |
+| POST | /auth/register | Register user | No |
+| POST | /auth/refresh | Refresh access token | No |
+| POST | /auth/logout | Logout user | Yes |
+| GET | /auth/me | Get current user | Yes |
+| PUT | /auth/me | Update profile (name, email) | Yes |
 
-**POST /api/auth/login**
+**User-managed endpoints (via /auth prefix):**
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | /auth/grade-weights | Get grade weights | Yes |
+| PUT | /auth/grade-weights | Save grade weights | Yes |
+| GET | /auth/backup | Download all data as JSON | Yes |
+| POST | /auth/restore | Upload JSON to restore | Yes |
+
+**POST /auth/login**
 ```json
 // Request
 { "email": "guru@example.com", "password": "password123" }
@@ -1206,13 +1379,12 @@ US-034: Sebagai guru, saya ingin AI membuat catatan rapor
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | /api/students | List all students | Yes |
-| GET | /api/students/:id | Get student by ID | Yes |
-| POST | /api/students | Create student | Yes |
-| PUT | /api/students/:id | Update student | Yes |
-| DELETE | /api/students/:id | Delete student | Yes |
+| GET | /students | List all students | Yes |
+| POST | /students | Create student | Yes |
+| PUT | /students/:id | Update student | Yes |
+| DELETE | /students/:id | Delete student | Yes |
 
-**Query Parameters for GET /api/students:**
+**Query Parameters for GET /students:**
 - `class` - Filter by class (e.g., "7-6")
 - `search` - Search by name or NIS
 
@@ -1220,17 +1392,17 @@ US-034: Sebagai guru, saya ingin AI membuat catatan rapor
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | /api/attendance | List attendance records | Yes |
-| POST | /api/attendance/batch | Batch save attendance | Yes |
-| GET | /api/attendance/summary | Get attendance summary | Yes |
+| GET | /attendance | List attendance records | Yes |
+| POST | /attendance/batch | Batch save attendance | Yes |
+| GET | /attendance/summary | Get attendance summary | Yes |
 
-**Query Parameters for GET /api/attendance:**
+**Query Parameters for GET /attendance:**
 - `class` - Filter by class
 - `event_date` - Filter by date
 - `start_date` - Start date range
 - `end_date` - End date range
 
-**POST /api/attendance/batch**
+**POST /attendance/batch**
 ```json
 // Request
 {
@@ -1246,7 +1418,7 @@ US-034: Sebagai guru, saya ingin AI membuat catatan rapor
 { "message": "Attendance saved successfully", "count": 2 }
 ```
 
-**GET /api/attendance/summary**
+**GET /attendance/summary**
 ```json
 // Response 200
 {
@@ -1263,28 +1435,29 @@ US-034: Sebagai guru, saya ingin AI membuat catatan rapor
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | /api/grades | List grades | Yes |
-| POST | /api/grades/batch | Batch save grades | Yes |
-| GET | /api/grades/semester | Get semester grades | Yes |
+| GET | /grades | List grades | Yes |
+| POST | /grades/batch | Batch save grades | Yes |
+| GET | /grades/semester | Get semester grades | Yes |
 
-**Query Parameters for GET /api/grades:**
+**Query Parameters for GET /grades:**
 - `class` - Filter by class
 - `semester` - Filter by semester (Ganjil/Genap)
 - `bab` - Filter by BAB number
+- `academic_year_id` - Filter by tahun ajaran
 
 ### 11.5 Learning Activities (Agenda)
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | /api/activities | List activities | Yes |
-| GET | /api/activities/:id | Get activity by ID | Yes |
-| POST | /api/activities | Create activity | Yes |
-| PUT | /api/activities/:id | Update activity | Yes |
-| DELETE | /api/activities/:id | Delete activity | Yes |
-| POST | /api/activities/duplicate | Duplicate to next week | Yes |
-| POST | /api/activities/batch | Batch create activities | Yes |
+| GET | /activities | List activities | Yes |
+| GET | /activities/:id | Get activity by ID | Yes |
+| POST | /activities | Create activity | Yes |
+| PUT | /activities/:id | Update activity | Yes |
+| DELETE | /activities/:id | Delete activity | Yes |
+| POST | /activities/duplicate | Duplicate to next week | Yes |
+| POST | /activities/batch | Batch create activities | Yes |
 
-**Query Parameters for GET /api/activities:**
+**Query Parameters for GET /activities:**
 - `start_date` - Start date
 - `end_date` - End date
 - `class` - Filter by class
@@ -1293,75 +1466,124 @@ US-034: Sebagai guru, saya ingin AI membuat catatan rapor
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | /api/tabungan | List tabungan records | Yes |
-| POST | /api/tabungan | Create tabungan record | Yes |
-| PUT | /api/tabungan/:id | Update tabungan record | Yes |
-| DELETE | /api/tabungan/:id | Delete tabungan record | Yes |
-| GET | /api/tabungan/summary | Get tabungan summary | Yes |
+| GET | /tabungan | List tabungan records | Yes |
+| POST | /tabungan | Create tabungan record | Yes |
+| PUT | /tabungan/:id | Update tabungan record | Yes |
+| DELETE | /tabungan/:id | Delete tabungan record | Yes |
+| GET | /tabungan/summary | Get tabungan summary | Yes |
 
 ### 11.7 Kas Umum Tabungan
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | /api/kas-umum | List kas umum records | Yes |
-| POST | /api/kas-umum | Create kas umum record | Yes |
-| PUT | /api/kas-umum/:id | Update kas umum record | Yes |
-| DELETE | /api/kas-umum/:id | Delete kas umum record | Yes |
+| GET | /kas-umum | List kas umum records | Yes |
+| POST | /kas-umum | Create kas umum record | Yes |
+| PUT | /kas-umum/:id | Update kas umum record | Yes |
+| DELETE | /kas-umum/:id | Delete kas umum record | Yes |
 
 ### 11.8 Materi
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| GET | /api/materi | List all materi | Yes |
-| POST | /api/materi | Create materi | Yes |
-| DELETE | /api/materi/:id | Delete materi | Yes |
+| GET | /materi | List all materi | Yes |
+| POST | /materi | Create materi | Yes |
+| DELETE | /materi/:id | Delete materi | Yes |
 
-### 11.9 Dashboard
-
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | /api/dashboard/stats | Get dashboard statistics | Yes |
-| GET | /api/dashboard/attendance-trend | Get attendance trend data | Yes |
-
-### 11.10 AI
+### 11.9 Dashboard & Analytics
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| POST | /api/ai/activity-ideas | Generate activity ideas | Yes |
-| POST | /api/ai/rapor-note | Generate rapor note | Yes |
+| GET | /dashboard/stats | Get dashboard statistics | Yes |
+| GET | /dashboard/attendance-trend | Get attendance trend data | Yes |
+| GET | /analytic | Get grade analytics data | Yes |
+
+### 11.10 Academic Years & Semesters
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | /academic-years | List academic years | Yes |
+| POST | /academic-years | Create academic year | Admin |
+| GET | /semesters | List semesters | Yes |
+
+### 11.11 Subjects
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | /subjects | List subjects | Yes |
+| POST | /subjects | Create subject | Admin |
+| DELETE | /subjects/:id | Delete subject | Admin |
+
+### 11.12 Calendar Events
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | /calendar-events | List events | Yes |
+| POST | /calendar-events | Create event | Yes |
+| PUT | /calendar-events/:id | Update event | Yes |
+| DELETE | /calendar-events/:id | Delete event | Yes |
+
+### 11.13 Notifications
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | /notifications | List notifications | Yes |
+| POST | /notifications/register | Register push token | Yes |
+| PUT | /notifications/:id/read | Mark as read | Yes |
+
+### 11.14 Admin
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | /admin/users | List all users | Admin |
+| GET | /admin/logs | View activity logs | Admin |
+| GET | /admin/stats | Admin dashboard stats | Admin |
+
+### 11.15 Search
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | /search | Global search (students, classes) | Yes |
+
+### 11.16 AI
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | /ai/activity-ideas | Generate activity ideas | Yes |
+| POST | /ai/rapor-note | Generate rapor note | Yes |
 
 ---
 
 ## 12. Authentication & Authorization
 
-### 12.1 JWT Strategy
+### 12.1 Authentication Strategy
 
-- **Access Token:** 15 menit expiry, dikirim via Authorization header
-- **Refresh Token:** 7 hari expiry, disimpan di httpOnly cookie
-- **Algorithm:** HS256 dengan secret key dari environment
+- **Supabase Auth** manages user registration, login, and JWT tokens
+- **JWT** dikirim via Authorization header: `Authorization: Bearer <token>`
+- **Row Level Security (RLS)** on all tables for data isolation
+- **Refresh tokens** handled automatically by Supabase client
 
-### 12.2 Token Flow
+### 12.2 Auth Flow
 
 ```
 1. Login
-   POST /api/auth/login
-   Response: { accessToken, refreshToken, user }
+   POST /auth/login
+   Response: { user, accessToken, refreshToken }
 
 2. API Request
-   GET /api/students
+   GET /students
    Authorization: Bearer <accessToken>
 
 3. Token Expired
-   Response 401: { error: "Token expired" }
+   Response 401
 
 4. Refresh Token
-   POST /api/auth/refresh
-   Body: { refreshToken: "..." }
+   POST /auth/refresh
+   Body: { refreshToken }
    Response: { accessToken, refreshToken }
 
 5. Logout
-   POST /api/auth/logout
-   Body: { refreshToken: "..." }
+   POST /auth/logout
+   Body: { refreshToken }
    Server: Revoke refresh token
 ```
 
@@ -1836,7 +2058,7 @@ NODE_ENV=production
 - **Logging:** morgan untuk HTTP logs, winston untuk application logs
 - **Error Tracking:** Sentry integration
 - **Performance:** Response time monitoring (custom middleware)
-- **Uptime:** Health check endpoint (/api/health)
+- **Uptime:** Supabase project health (monitored by Supabase)
 
 ### 22.2 Frontend Monitoring
 
@@ -1956,6 +2178,7 @@ NODE_ENV=production
 | fe/src/hooks/ | 3 | ~80 each | 240 |
 | fe/src/context/ | 1 | ~150 | 150 |
 | fe/src/api/ | 1 | ~100 | 100 |
+| supabase/functions/ | 13 | ~200 | 200 |
 | fe/src/types/ | 1 | ~150 | 150 |
 | fe/config files | 5 | ~30 each | 150 |
 | be/src/routes/ | 7 | ~150 each | 1050 |

@@ -28,6 +28,11 @@ Deno.serve(async (req) => {
     if (method === 'POST' && path === '/reset-password') return await handleResetPassword(req);
     if (method === 'GET' && path === '/users') return await handleUsers(req);
     if (method === 'POST' && path === '/change-password') return await handleChangePassword(req);
+    if (method === 'PUT' && path === '/me') return await handleUpdateProfile(req);
+    if (method === 'GET' && path === '/grade-weights') return await handleGetGradeWeights(req);
+    if (method === 'PUT' && path === '/grade-weights') return await handleUpdateGradeWeights(req);
+    if (method === 'GET' && path === '/backup') return await handleBackup(req);
+    if (method === 'POST' && path === '/restore') return await handleRestore(req);
 
     return new Response(JSON.stringify({ success: false, error: 'Not found' }), { status: 404, headers: corsHeaders });
   } catch (err: any) {
@@ -148,6 +153,135 @@ async function handleResetPassword(req: Request) {
   const { error } = await supabaseAdmin.auth.admin.updateUserById(user.id, { password });
   if (error) return json({ success: false, error: 'Gagal mereset password' }, 400);
   return json({ success: true, message: 'Password berhasil direset' });
+}
+
+async function handleUpdateProfile(req: Request) {
+  const auth = req.headers.get('Authorization');
+  if (!auth?.startsWith('Bearer ')) return json({ success: false, error: 'Unauthorized' }, 401);
+
+  const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(auth.slice(7));
+  if (userError || !user) return json({ success: false, error: 'Unauthorized' }, 401);
+
+  const appUser = await getAppUser(user.id);
+  if (!appUser) return json({ success: false, error: 'User not found' }, 404);
+
+  const { currentPassword, name, email } = await req.json();
+
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email: user.email!, password: currentPassword });
+  if (signInError) return json({ success: false, error: 'Password saat ini salah' }, 400);
+
+  const updates: any = {};
+  if (name !== undefined) updates.name = name;
+  if (email !== undefined && email !== appUser.email) updates.email = email;
+
+  if (Object.keys(updates).length === 0) return json({ success: false, error: 'Tidak ada data yang diubah' }, 400);
+
+  if (updates.email) {
+    const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, { email: updates.email });
+    if (authUpdateError) return json({ success: false, error: 'Gagal mengupdate email: ' + authUpdateError.message }, 400);
+  }
+
+  const { data: updatedUser, error: updateError } = await supabaseAdmin.from('users').update(updates).eq('id', appUser.id).select().single();
+  if (updateError) return json({ success: false, error: 'Gagal mengupdate profil' }, 500);
+
+  return json({ success: true, data: updatedUser });
+}
+
+async function handleGetGradeWeights(req: Request) {
+  const appUser = await getAuthedUser(req);
+  if (!appUser) return json({ success: false, error: 'Unauthorized' }, 401);
+
+  let { data } = await supabaseAdmin.from('grade_weights').select('*').eq('teacher_id', appUser.id).single();
+  if (!data) {
+    data = { teacher_id: appUser.id, bobot_harian: 40, bobot_sts: 30, bobot_sas: 30 };
+  }
+  return json({ success: true, data });
+}
+
+async function handleUpdateGradeWeights(req: Request) {
+  const appUser = await getAuthedUser(req);
+  if (!appUser) return json({ success: false, error: 'Unauthorized' }, 401);
+
+  const { bobot_harian, bobot_sts, bobot_sas } = await req.json();
+  if (bobot_harian + bobot_sts + bobot_sas !== 100) return json({ success: false, error: 'Total bobot harus 100%' }, 400);
+
+  const { data, error } = await supabaseAdmin.from('grade_weights').upsert({
+    teacher_id: appUser.id, bobot_harian, bobot_sts, bobot_sas, updated_at: new Date().toISOString(),
+  }).select().single();
+  if (error) return json({ success: false, error: 'Gagal menyimpan bobot' }, 500);
+
+  return json({ success: true, data });
+}
+
+async function getAuthedUser(req: Request) {
+  const auth = req.headers.get('Authorization');
+  if (!auth?.startsWith('Bearer ')) return null;
+  const { data: { user } } = await supabaseAdmin.auth.getUser(auth.slice(7));
+  if (!user) return null;
+  return await getAppUser(user.id);
+}
+
+async function handleBackup(req: Request) {
+  const appUser = await getAuthedUser(req);
+  if (!appUser) return json({ success: false, error: 'Unauthorized' }, 401);
+
+  const [students, attendance, grades, tabungan, kasUmum, materi, activities] = await Promise.all([
+    supabaseAdmin.from('students').select('*').eq('teacher_id', appUser.id),
+    supabaseAdmin.from('attendance').select('*').eq('teacher_id', appUser.id),
+    supabaseAdmin.from('grades').select('*').eq('teacher_id', appUser.id),
+    supabaseAdmin.from('tabungan').select('*').eq('teacher_id', appUser.id),
+    supabaseAdmin.from('kas_umum').select('*').eq('teacher_id', appUser.id),
+    supabaseAdmin.from('materi').select('*').eq('teacher_id', appUser.id),
+    supabaseAdmin.from('learning_activities').select('*').eq('teacher_id', appUser.id),
+  ]);
+
+  const data = {
+    teacher: { id: appUser.id, name: appUser.name, email: appUser.email, teacher_classes: appUser.teacher_classes },
+    students: students.data || [],
+    attendance: attendance.data || [],
+    grades: grades.data || [],
+    tabungan: tabungan.data || [],
+    kas_umum: kasUmum.data || [],
+    materi: materi.data || [],
+    learning_activities: activities.data || [],
+    exported_at: new Date().toISOString(),
+  };
+
+  return json({ success: true, data });
+}
+
+async function handleRestore(req: Request) {
+  const appUser = await getAuthedUser(req);
+  if (!appUser) return json({ success: false, error: 'Unauthorized' }, 401);
+
+  const body = await req.json();
+  const { students, attendance, grades, tabungan, kas_umum, materi, learning_activities } = body;
+
+  const tid = appUser.id;
+
+  const clearAndInsert = async (table: string, rows: any[], mapRow: (r: any) => any) => {
+    await supabaseAdmin.from(table).delete().eq('teacher_id', tid);
+    if (rows?.length > 0) {
+      const mapped = rows.map(mapRow);
+      await supabaseAdmin.from(table).insert(mapped);
+    }
+  };
+
+  await Promise.all([
+    clearAndInsert('students', students, (r: any) => ({ teacher_id: tid, student_id: r.student_id, name: r.name, class: r.class, address: r.address || '', dob: r.dob || '', father_name: r.father_name || '', father_job: r.father_job || '', mother_name: r.mother_name || '', mother_job: r.mother_job || '', phone: r.phone || '', notes: r.notes || '' })),
+    clearAndInsert('attendance', attendance, (r: any) => ({ teacher_id: tid, student_id: r.student_id, event_date: r.event_date, class: r.class, keterangan: r.keterangan })),
+    clearAndInsert('grades', grades, (r: any) => {
+      const g: any = { teacher_id: tid, student_id: r.student_id, semester: r.semester };
+      ['bab_1','bab_2','bab_3','bab_4','pengetahuan_rata','keterampilan_rata','sikap_rata','sikap_jujur','sikap_disiplin','sikap_tgg_jawab','sts','sas'].forEach(k => { if (r[k] !== undefined) g[k] = r[k]; });
+      return g;
+    }),
+    clearAndInsert('tabungan', tabungan, (r: any) => ({ teacher_id: tid, student_id: r.student_id, tanggal: r.tanggal, uang_masuk: r.uang_masuk, uang_keluar: r.uang_keluar })),
+    clearAndInsert('kas_umum', kas_umum, (r: any) => ({ teacher_id: tid, tanggal: r.tanggal, jumlah: r.jumlah, keterangan: r.keterangan || '' })),
+    clearAndInsert('materi', materi, (r: any) => ({ teacher_id: tid, title: r.title, type: r.type, konten: r.konten || '', topik: r.topik || '', mapel: r.mapel || '', kelas: r.kelas || '', tingkat_kesulitan: r.tingkat_kesulitan || '', durasi: r.durasi || 0 })),
+    clearAndInsert('learning_activities', learning_activities, (r: any) => ({ teacher_id: tid, event_date: r.event_date, class: r.class, waktu_mulai: r.waktu_mulai, waktu_selesai: r.waktu_selesai, catatan: r.catatan || '', subject_id: r.subject_id || null })),
+  ]);
+
+  return json({ success: true, message: 'Data berhasil dipulihkan' });
 }
 
 async function handleChangePassword(req: Request) {

@@ -173,24 +173,6 @@ export default function KalenderPendidikan() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex gap-1">
-          <button onClick={downloadTemplate} className="px-2.5 py-2 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-colors" title="Download Template"><i className="fas fa-download mr-1"></i>Template</button>
-          <button onClick={exportKalender} className="px-2.5 py-2 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-colors" title="Export Excel"><i className="fas fa-file-export mr-1"></i>Export</button>
-          <button onClick={() => setImportOpen(true)} className="px-2.5 py-2 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-colors" title="Import Excel"><i className="fas fa-file-import mr-1"></i>Import</button>
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="flex flex-wrap gap-2">
-        {Object.entries(EVENT_LABELS).map(([key, val]) => (
-          <div key={key} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-black/[0.06] text-xs">
-            <div className={`w-2.5 h-2.5 rounded-full ${val.dot}`}></div>
-            <span className="text-text-secondary">{val.label}</span>
-          </div>
-        ))}
-      </div>
-
       {/* Calendar */}
       <Card padding={false} className="relative overflow-hidden">
         <button onClick={() => { if (scrollRef.current) scrollRef.current.scrollBy({ left: -scrollRef.current.clientWidth, behavior: 'smooth' }); }} className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-2xl bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center hover:bg-white transition-all">
@@ -241,6 +223,21 @@ export default function KalenderPendidikan() {
           </div>
         )}
       </Card>
+
+      {/* Legend & Actions */}
+      <div className="flex flex-wrap gap-2">
+        {Object.entries(EVENT_LABELS).map(([key, val]) => (
+          <div key={key} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-black/[0.06] text-xs">
+            <div className={`w-2.5 h-2.5 rounded-full ${val.dot}`}></div>
+            <span className="text-text-secondary">{val.label}</span>
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-1">
+        <button onClick={downloadTemplate} className="px-2.5 py-2 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-colors" title="Download Template"><i className="fas fa-download mr-1"></i>Template</button>
+        <button onClick={exportKalender} className="px-2.5 py-2 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-colors" title="Export Excel"><i className="fas fa-file-export mr-1"></i>Export</button>
+        <button onClick={() => setImportOpen(true)} className="px-2.5 py-2 rounded-lg text-xs font-medium bg-white border border-black/[0.06] hover:bg-surface-secondary text-text-secondary transition-colors" title="Import Excel"><i className="fas fa-file-import mr-1"></i>Import</button>
+      </div>
 
       <Modal open={importOpen} onClose={() => { if (!importing) { setImportOpen(false); setImportResult(null); } }} title="Import Kalender dari Excel">
         <div className="space-y-4">

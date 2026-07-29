@@ -227,12 +227,12 @@ export default function Absensi() {
           {[...students].sort((a, b) => a.name.localeCompare(b.name)).map((student, idx) => {
             const status = getStatus(student.student_id);
             return (
-              <div key={student.student_id} className="flex items-center justify-between px-5 py-3.5 hover:bg-surface-secondary transition-colors">
+              <div key={student.student_id} className="flex items-center justify-between px-3 sm:px-5 py-2 sm:py-3.5 hover:bg-surface-secondary transition-colors">
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="text-xs text-text-tertiary w-6 flex-shrink-0">{idx + 1}</span>
                   <div>
-                    <p className="text-sm font-medium">{student.name}</p>
-                    <p className="text-[11px] text-text-tertiary">{student.student_id}</p>
+                    <p className="text-xs sm:text-sm font-medium">{student.name}</p>
+                    <p className="text-[10px] sm:text-[11px] text-text-tertiary">{student.student_id}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">

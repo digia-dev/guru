@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import toast from 'react-hot-toast';
-import { Student, Grade, Subject, SemesterGrade } from '../types';
+import { Student, Grade, Subject, SemesterGrade, AcademicYear } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useClasses } from '../hooks/useClasses';
 import { useAutoSave } from '../hooks/useAutoSave';
@@ -20,6 +20,12 @@ export default function Nilai() {
   const [selectedClass, setSelectedClass] = useState('');
   useEffect(() => { if (classes.length > 0 && !selectedClass) setSelectedClass(classes[0]); }, [classes, selectedClass]);
   const [semester, setSemester] = useState<'Ganjil' | 'Genap'>(() => new Date().getMonth() + 1 >= 7 ? 'Ganjil' : 'Genap');
+  const [tahunAjaran, setTahunAjaran] = useState('');
+  const { data: academicYears = [] } = useQuery({
+    queryKey: ['academic-years'],
+    queryFn: async () => { const { data } = await apiClient.get('/academic-years'); return (data.data || []) as AcademicYear[]; },
+  });
+  useEffect(() => { if (academicYears.length > 0 && !tahunAjaran) setTahunAjaran(String(academicYears.find(y => y.is_active)?.id || academicYears[0].id)); }, [academicYears, tahunAjaran]);
   const [bab, setBab] = useState<string>('all');
   const [gradeChanges, setGradeChanges] = useState<Map<string, any>>(new Map());
 
@@ -41,7 +47,7 @@ export default function Nilai() {
   });
 
   const { data: grades = [] } = useQuery({
-    queryKey: ['grades', selectedClass, semester, selectedSubject],
+    queryKey: ['grades', selectedClass, semester, tahunAjaran, selectedSubject],
     queryFn: async () => {
       const subjectId = allSubjects.find(s => s.code === selectedSubject)?.id;
       const params = `class=${selectedClass}&semester=${semester}${subjectId ? `&subject_id=${subjectId}` : ''}`;
@@ -138,7 +144,7 @@ export default function Nilai() {
 
       {/* Filters */}
       <Card>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">Kelas</label>
             <div className="relative">
@@ -152,8 +158,17 @@ export default function Nilai() {
             <label className="label">Semester</label>
             <div className="relative">
               <select value={semester} onChange={(e) => { setSemester(e.target.value as any); setGradeChanges(new Map()); }} className="select-field">
-                <option value="Ganjil">Semester Ganjil 2026/2027</option>
-                <option value="Genap">Semester Genap 2026/2027</option>
+                <option value="Ganjil">Ganjil</option>
+                <option value="Genap">Genap</option>
+              </select>
+              <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
+            </div>
+          </div>
+          <div>
+            <label className="label">Tahun Ajaran</label>
+            <div className="relative">
+              <select value={tahunAjaran} onChange={(e) => setTahunAjaran(e.target.value)} className="select-field">
+                {academicYears.map(y => <option key={y.id} value={y.id}>{y.name}</option>)}
               </select>
               <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
             </div>
@@ -174,12 +189,14 @@ export default function Nilai() {
             )}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 mt-4">
+        <div className="flex flex-nowrap gap-1.5 mt-4">
           {['all', '1', '2', '3', '4'].map((b) => (
-            <button key={b} onClick={() => setBab(b)} className={bab === b ? 'chip-active' : 'chip-inactive'}>
+            <button key={b} onClick={() => setBab(b)} className={`${bab === b ? 'chip-active' : 'chip-inactive'} !px-2 !py-1 !text-[10px]`}>
               {b === 'all' ? 'Semua BAB' : `BAB ${b}`}
             </button>
           ))}
+        </div>
+        <div className="flex items-center justify-end gap-3 mt-3">
           {saveStatus !== 'idle' && (
             <span className={`ml-auto text-xs font-medium px-3 py-1.5 rounded-full self-center ${
               saveStatus === 'saving' ? 'bg-soft-purple text-primary' :
@@ -200,7 +217,7 @@ export default function Nilai() {
             <thead>
               {bab === 'all' ? (
                 <tr className="bg-surface-secondary">
-                  <th className="table-header sticky left-0 bg-surface-secondary z-10 min-w-[160px]">Nama Siswa</th>
+                  <th className="table-header sticky left-0 bg-surface-secondary z-10 min-w-[100px] sm:min-w-[160px]">Nama Siswa</th>
                   <th className="table-header text-center">Rata Pengetahuan</th>
                   <th className="table-header text-center">Rata Keterampilan</th>
                   <th className="table-header text-center">Rata Sikap</th>

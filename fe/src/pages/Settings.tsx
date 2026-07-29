@@ -1,10 +1,9 @@
-﻿import { useState, useRef } from 'react';
+﻿import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as XLSX from 'xlsx';
 import apiClient from '../api/client';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
-import { Student, User, Tabungan, KasUmum } from '../types';
+import { Student, User, Tabungan, Materi, AcademicYear, Semester } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { exportXLSX } from '../utils/exportXLSX';
 import Card from '../components/ui/Card';
@@ -67,13 +66,14 @@ const DATA_ITEMS = [
     importCacheKey: ['tabungan-summary'],
   },
   {
-    key: 'kas', icon: 'fa-building-columns', label: 'Kas Umum', desc: 'Penarikan dana kas kelas',
-    headers: ['Tanggal', 'Jumlah', 'Keterangan'],
-    sample: ['2026-01-15', '50000', 'Pembelian ATK'],
-    exportCols: [{ key: 'tanggal', label: 'Tanggal' }, { key: 'jumlah', label: 'Jumlah' }, { key: 'keterangan', label: 'Keterangan' }],
-    importEndpoint: '/kas-umum',
-    importMapRow: (r: any) => ({ tanggal: r['Tanggal'], jumlah: parseInt(r['Jumlah']) || 0, keterangan: r['Keterangan'] || '' }),
-    importCacheKey: ['kas-umum'],
+    key: 'materi', icon: 'fa-book', label: 'Materi', desc: 'Judul, tipe, topik, mapel, kelas',
+    headers: ['Judul', 'Tipe', 'Topik', 'Mapel', 'Kelas'],
+    sample: ['Barisan & Deret', 'dokumen', 'Matematika', 'Matematika', '7-1'],
+    exportCols: [
+      { key: 'title', label: 'Judul' }, { key: 'type', label: 'Tipe' },
+      { key: 'topik', label: 'Topik' }, { key: 'mapel', label: 'Mapel' },
+      { key: 'kelas', label: 'Kelas' },
+    ],
   },
   {
     key: 'kalender', icon: 'fa-calendar-alt', label: 'Kalender Pendidikan', desc: 'Semua acara tahun ajaran',
@@ -82,6 +82,14 @@ const DATA_ITEMS = [
     exportCols: [{ key: 'tanggal', label: 'Tanggal' }, { key: 'kegiatan', label: 'Kegiatan' }, { key: 'tipe', label: 'Tipe' }],
   },
 ];
+
+const GRADIENT_MAP: Record<string, string> = {
+  siswa: 'from-blue-500 to-cyan-400',
+  guru: 'from-purple-500 to-pink-400',
+  tabungan: 'from-amber-500 to-orange-400',
+  materi: 'from-emerald-500 to-teal-400',
+  kalender: 'from-indigo-500 to-violet-400',
+};
 
 function makeCalExportRows() {
   const rows: { tanggal: string; kegiatan: string; tipe: string }[] = [];
@@ -92,56 +100,74 @@ function makeCalExportRows() {
   return rows;
 }
 
-function ExportImportTab() {
+export default function Settings() {
   const { user } = useAuth();
   const isAdm = user?.role === 'admin';
   const queryClient = useQueryClient();
-  const classes = user?.teacher_classes || [];
-  const [selectedClass, setSelectedClass] = useState(classes[0] || '');
-  const [exportStart, setExportStart] = useState('');
-  const [exportEnd, setExportEnd] = useState('');
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
 
+  const [bobotHarian, setBobotHarian] = useState(40);
+  const [bobotSts, setBobotSts] = useState(30);
+  const [bobotSas, setBobotSas] = useState(30);
+  const [bobotSaving, setBobotSaving] = useState(false);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [restoreModal, setRestoreModal] = useState(false);
+
   const { data: students = [] } = useQuery({
-    queryKey: ['settings-students', selectedClass],
-    queryFn: async () => { const { data } = await apiClient.get(`/students?class=${encodeURIComponent(selectedClass)}`); return data.data as Student[]; },
-    enabled: !!selectedClass,
+    queryKey: ['settings-students'],
+    queryFn: async () => { const { data } = await apiClient.get('/students'); return (data.data || []) as Student[]; },
   });
   const { data: guruList = [] } = useQuery({
     queryKey: ['settings-guru'],
     queryFn: async () => { const { data } = await apiClient.get('/auth/users'); return (data.success ? data.data : []) as User[]; },
     enabled: isAdm,
   });
+  const { data: tabunganData = [] } = useQuery({
+    queryKey: ['settings-tabungan'],
+    queryFn: async () => { const { data } = await apiClient.get('/tabungan'); return (data.data || []) as Tabungan[]; },
+  });
+  const { data: materiData = [] } = useQuery({
+    queryKey: ['settings-materi'],
+    queryFn: async () => { const { data } = await apiClient.get('/materi'); return (data.data || []) as Materi[]; },
+  });
+
+  const { data: gradeWeights } = useQuery({
+    queryKey: ['grade-weights'],
+    queryFn: async () => { const { data } = await apiClient.get('/auth/grade-weights'); setBobotHarian(data.data.bobot_harian); setBobotSts(data.data.bobot_sts); setBobotSas(data.data.bobot_sas); return data.data; },
+  });
+
+  const { data: academicYears = [] } = useQuery({
+    queryKey: ['academic-years'],
+    queryFn: async () => { const { data } = await apiClient.get('/academic-years'); return (data.data || []) as AcademicYear[]; },
+  });
+  const { data: semesters = [] } = useQuery({
+    queryKey: ['semesters'],
+    queryFn: async () => { const { data } = await apiClient.get('/semesters'); return (data.data || []) as Semester[]; },
+  });
+
   const runExport = async (key: string) => {
     const item = DATA_ITEMS.find(i => i.key === key);
     if (!item) return;
 
+    setLoadingKey(key);
+    let rows: any[] = [];
+    let filename = `data-${key}`;
+
     if (key === 'tabungan') {
-      if (!exportStart || !exportEnd) { toast.error('Pilih rentang tanggal'); return; }
-      setLoadingKey(key);
-      try {
-        const { data } = await apiClient.get(`/tabungan?start_date=${exportStart}&end_date=${exportEnd}`);
-        const rows = (data.data as Tabungan[]).map(t => ({
-          tanggal: t.tanggal, siswa: t.student_id,
-          uang_masuk: t.uang_masuk, uang_keluar: t.uang_keluar,
-        }));
-        exportXLSX(rows, `tabungan-${exportStart}-${exportEnd}`, item.exportCols);
-      } finally { setLoadingKey(null); }
-      return;
+      rows = tabunganData.map(t => ({ tanggal: t.tanggal, siswa: t.student_id, uang_masuk: t.uang_masuk, uang_keluar: t.uang_keluar }));
+    } else if (key === 'materi') {
+      rows = materiData.map(m => ({ title: m.title, type: m.type, topik: m.topik || '', mapel: m.mapel || '', kelas: m.kelas || '' }));
+    } else if (key === 'kalender') {
+      rows = makeCalExportRows();
+      filename = 'kalender-pendidikan';
+    } else if (key === 'siswa') {
+      rows = students;
+    } else if (key === 'guru') {
+      rows = guruList;
     }
 
-    if (key === 'kas') {
-      setLoadingKey(key);
-      try {
-        const { data } = await apiClient.get('/kas-umum');
-        exportXLSX(data.data as KasUmum[], 'kas-umum', item.exportCols);
-      } finally { setLoadingKey(null); }
-      return;
-    }
-
-    const dataMap: Record<string, any[]> = { siswa: students, guru: guruList, kalender: makeCalExportRows() };
-    const data = dataMap[key] || [];
-    exportXLSX(data, `${key === 'kalender' ? 'kalender-pendidikan' : key === 'siswa' ? `data-${key}-${selectedClass}` : `data-${key}`}`, item.exportCols);
+    exportXLSX(rows, filename, item.exportCols);
+    setLoadingKey(null);
   };
 
   const downloadTemplate = (item: typeof DATA_ITEMS[number]) => {
@@ -172,7 +198,7 @@ function ExportImportTab() {
       let count = 0; let errors = 0;
       for (const row of rows) {
         try {
-          const payload = item.importMapRow!(row, selectedClass);
+          const payload = item.importMapRow!(row, '');
           await apiClient.post(item.importEndpoint, payload);
           count++;
         } catch { errors++; }
@@ -191,6 +217,63 @@ function ExportImportTab() {
     }
   };
 
+  const saveBobot = async () => {
+    setBobotSaving(true);
+    try {
+      await apiClient.put('/auth/grade-weights', { bobot_harian: bobotHarian, bobot_sts: bobotSts, bobot_sas: bobotSas });
+      toast.success('Bobot nilai berhasil disimpan');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Gagal menyimpan bobot');
+    } finally {
+      setBobotSaving(false);
+    }
+  };
+
+  const handleBackup = async () => {
+    setBackupLoading(true);
+    try {
+      const { data } = await apiClient.get('/auth/backup');
+      const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Backup berhasil diunduh');
+    } catch {
+      toast.error('Gagal membuat backup');
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (!parsed.students || !parsed.attendance) { toast.error('Format backup tidak valid'); return; }
+      await apiClient.post('/auth/restore', parsed);
+      toast.success('Restore berhasil');
+      queryClient.invalidateQueries();
+    } catch {
+      toast.error('Gagal restore. Pastikan file backup valid');
+    } finally {
+      setRestoreModal(false);
+      e.target.value = '';
+    }
+  };
+
+  const triggerRestore = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e: any) => handleRestore(e);
+    input.click();
+  };
+
   const triggerImport = (key: string) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -199,23 +282,12 @@ function ExportImportTab() {
     input.click();
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2 p-3 bg-surface-secondary rounded-2xl">
-        <div className="relative">
-          <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)} className="select-field pr-8 min-w-[120px] text-sm">
-            {classes.length === 0 && <option value="">Pilih Kelas</option>}
-            {classes.map(c => <option key={c} value={c}>Kelas {c}</option>)}
-          </select>
-          <i className="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
-        </div>
-        <span className="text-xs text-text-tertiary">Rentang tabungan:</span>
-        <input type="date" value={exportStart} onChange={e => setExportStart(e.target.value)} className="input-field w-32 text-xs" />
-        <span className="text-text-tertiary">â€”</span>
-        <input type="date" value={exportEnd} onChange={e => setExportEnd(e.target.value)} className="input-field w-32 text-xs" />
-      </div>
+  const activeYear = academicYears.find((y) => y.is_active);
+  const activeSemester = semesters.find((s) => s.is_active);
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {DATA_ITEMS.filter(item => isAdm || item.key !== 'guru').map(item => {
           const isExpLoading = loadingKey === item.key;
           const isImpLoading = loadingKey === `import-${item.key}`;
@@ -223,9 +295,7 @@ function ExportImportTab() {
 
           return (
             <div key={item.key} className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-black/[0.06] bg-white text-center">
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${
-                { siswa: 'from-blue-500 to-cyan-400', guru: 'from-purple-500 to-pink-400', materi: 'from-emerald-500 to-teal-400', tabungan: 'from-amber-500 to-orange-400', kas: 'from-rose-500 to-red-400', kalender: 'from-indigo-500 to-violet-400' }[item.key]
-              } flex items-center justify-center text-white shadow-sm`}>
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${GRADIENT_MAP[item.key] || 'from-gray-500 to-gray-400'} flex items-center justify-center text-white shadow-sm`}>
                 <i className={`fas ${item.icon} text-sm`}></i>
               </div>
               <div>
@@ -234,185 +304,129 @@ function ExportImportTab() {
               </div>
               <div className="flex items-center gap-1.5 mt-1">
                 <button
+                  onClick={() => downloadTemplate(item)}
+                  className="text-xs px-2 py-1.5 rounded-xl bg-soft-purple text-primary hover:bg-purple-100 transition-colors"
+                  title="Download template Excel"
+                >
+                  <i className="fas fa-file-excel"></i>
+                </button>
+                <button
                   onClick={() => runExport(item.key)}
                   disabled={isExpLoading}
-                  className="text-xs font-medium px-2.5 py-1.5 rounded-xl bg-soft-blue text-blue-600 hover:bg-blue-100 disabled:opacity-50 transition-colors flex items-center gap-1"
+                  className="text-xs px-2 py-1.5 rounded-xl bg-soft-blue text-blue-600 hover:bg-blue-100 disabled:opacity-50 transition-colors"
+                  title="Export Excel"
                 >
                   {isExpLoading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-download"></i>}
-                  Ekspor
                 </button>
                 {hasImport ? (
                   <button
                     onClick={() => triggerImport(item.key)}
                     disabled={isImpLoading}
-                    className="text-xs font-medium px-2.5 py-1.5 rounded-xl bg-soft-green text-green-600 hover:bg-green-100 disabled:opacity-50 transition-colors flex items-center gap-1"
+                    className="text-xs px-2 py-1.5 rounded-xl bg-soft-green text-green-600 hover:bg-green-100 disabled:opacity-50 transition-colors"
+                    title="Import Excel"
                   >
                     {isImpLoading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-upload"></i>}
-                    Impor
                   </button>
-                ) : (
-                  <button
-                    onClick={() => downloadTemplate(item)}
-                    className="text-xs font-medium px-2.5 py-1.5 rounded-xl bg-soft-purple text-primary hover:bg-purple-100 transition-colors flex items-center gap-1"
-                    title="Download template"
-                  >
-                    <i className="fas fa-file-excel"></i>
-                  </button>
-                )}
+                ) : null}
               </div>
             </div>
           );
         })}
       </div>
-    </div>
-  );
-}
 
-function ProfileTab() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
-  return (
-    <div className="space-y-6 max-w-2xl">
+      {/* Bobot Nilai */}
       <Card>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-400 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-2xl flex-shrink-0 shadow-lg shadow-purple-500/20">
-            {user?.name?.charAt(0) || 'G'}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center text-white shadow-sm">
+            <i className="fas fa-weight-scale text-sm"></i>
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-bold">{user?.name || 'Guru'}</h3>
-            <p className="text-sm text-text-tertiary">{user?.email}</p>
-            <div className="flex items-center gap-2 mt-2">
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-soft-purple text-primary">
-                {user?.role === 'admin' ? 'Administrator' : 'Guru Kelas'}
+          <div>
+            <h3 className="font-semibold text-sm">Bobot Nilai</h3>
+            <p className="text-[10px] text-text-tertiary">Total harus 100%</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div>
+            <label className="label">Harian (%)</label>
+            <input type="number" min={0} max={100} value={bobotHarian} onChange={e => {
+              const v = parseInt(e.target.value) || 0;
+              setBobotHarian(v);
+            }} className="input-field text-center text-lg font-bold" />
+          </div>
+          <div>
+            <label className="label">STS (%)</label>
+            <input type="number" min={0} max={100} value={bobotSts} onChange={e => {
+              const v = parseInt(e.target.value) || 0;
+              setBobotSts(v);
+            }} className="input-field text-center text-lg font-bold" />
+          </div>
+          <div>
+            <label className="label">SAS (%)</label>
+            <input type="number" min={0} max={100} value={bobotSas} onChange={e => {
+              const v = parseInt(e.target.value) || 0;
+              setBobotSas(v);
+            }} className="input-field text-center text-lg font-bold" />
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className={`text-xs font-medium ${bobotHarian + bobotSts + bobotSas === 100 ? 'text-green-600' : 'text-red-500'}`}>
+            Total: {bobotHarian + bobotSts + bobotSas}%
+            {bobotHarian + bobotSts + bobotSas !== 100 && ' (harus 100%)'}
+          </span>
+          <Button size="sm" onClick={saveBobot} disabled={bobotSaving || bobotHarian + bobotSts + bobotSas !== 100} loading={bobotSaving}>
+            Simpan Bobot
+          </Button>
+        </div>
+      </Card>
+
+      {/* Tahun Ajaran */}
+      <Card>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-400 flex items-center justify-center text-white shadow-sm">
+            <i className="fas fa-calendar-alt text-sm"></i>
+          </div>
+          <div>
+            <h3 className="font-semibold text-sm">Tahun Ajaran</h3>
+            <p className="text-[10px] text-text-tertiary">Periode akademik aktif</p>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-surface-secondary">
+            <span className="text-sm text-text-secondary">Tahun Ajaran</span>
+            <span className="text-sm font-semibold">{activeYear?.name || '-'}</span>
+          </div>
+          <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-surface-secondary">
+            <span className="text-sm text-text-secondary">Semester</span>
+            <span className="text-sm font-semibold">{activeSemester?.name || '-'}</span>
+          </div>
+          {(activeYear?.start_date || activeYear?.end_date) && (
+            <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-surface-secondary">
+              <span className="text-sm text-text-secondary">Periode</span>
+              <span className="text-sm font-medium">
+                {activeYear?.start_date ? new Date(activeYear.start_date + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                {activeYear?.end_date ? ` - ${new Date(activeYear.end_date + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
               </span>
-              {Array.isArray(user?.teacher_classes) && user.teacher_classes.length > 0 && (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-soft-blue text-blue-600">
-                  Kelas {user.teacher_classes.join(', ')}
-                </span>
-              )}
             </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Backup & Restore */}
+      <Card>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-red-400 flex items-center justify-center text-white shadow-sm">
+            <i className="fas fa-database text-sm"></i>
+          </div>
+          <div>
+            <h3 className="font-semibold text-sm">Backup & Restore</h3>
+            <p className="text-[10px] text-text-tertiary">Cadangkan atau pulihkan seluruh data</p>
           </div>
         </div>
-      </Card>
-
-      <Card>
-        <h3 className="font-semibold text-sm mb-4">Informasi Akun</h3>
-        <div className="divide-y divide-black/[0.04]">
-          {[
-            { label: 'Nama', value: user?.name, icon: 'fa-user' },
-            { label: 'Email', value: user?.email, icon: 'fa-envelope' },
-            { label: 'Role', value: user?.role === 'admin' ? 'Administrator' : 'Guru', icon: 'fa-shield-halved' },
-            { label: 'Kelas', value: Array.isArray(user?.teacher_classes) ? user.teacher_classes.join(', ') : '-', icon: 'fa-school' },
-          ].map(item => (
-            <div key={item.label} className="flex items-center gap-4 py-3">
-              <div className="w-9 h-9 rounded-xl bg-surface-secondary flex items-center justify-center flex-shrink-0">
-                <i className={`fas ${item.icon} text-text-tertiary text-sm`}></i>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-text-tertiary">{item.label}</p>
-                <p className="text-sm font-medium truncate">{item.value || '-'}</p>
-              </div>
-            </div>
-          ))}
+        <div className="flex gap-2">
+          <Button icon="fa-download" onClick={handleBackup} loading={backupLoading} disabled={backupLoading}>Backup</Button>
+          <Button variant="secondary" icon="fa-upload" onClick={triggerRestore}>Restore</Button>
         </div>
       </Card>
-
-      <Card>
-        <h3 className="font-semibold text-sm mb-3">Aksi</h3>
-        <Button variant="danger" icon="fa-right-from-bracket" onClick={handleLogout} className="w-full sm:w-auto">
-          Keluar
-        </Button>
-      </Card>
-
-      <ChangePasswordForm />
-    </div>
-  );
-}
-
-function ChangePasswordForm() {
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleChangePassword = async () => {
-    if (newPassword !== confirmPassword) { toast.error('Konfirmasi password tidak cocok'); return; }
-    if (newPassword.length < 6) { toast.error('Password minimal 6 karakter'); return; }
-    setLoading(true);
-    try {
-      await apiClient.post('/auth/change-password', { currentPassword, newPassword });
-      toast.success('Password berhasil diubah');
-      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || 'Gagal mengubah password');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Card>
-      <h3 className="font-semibold text-sm mb-4">Ganti Password</h3>
-      <div className="space-y-4">
-        <div>
-          <label className="label">Password Saat Ini</label>
-          <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="input-field" placeholder="******" />
-        </div>
-        <div>
-          <label className="label">Password Baru</label>
-          <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input-field" placeholder="Minimal 6 karakter" />
-        </div>
-        <div>
-          <label className="label">Konfirmasi Password Baru</label>
-          <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="input-field" placeholder="******" />
-        </div>
-        <Button onClick={handleChangePassword} disabled={loading || !currentPassword || !newPassword || !confirmPassword} loading={loading}>
-          Simpan Password
-        </Button>
-      </div>
-    </Card>
-  );
-}
-
-export default function Settings() {
-  const [tab, setTab] = useState<'ekspor-impor' | 'profil'>('ekspor-impor');
-
-  return (
-    <div className="space-y-6 animate-fade-in">
-
-      <div>
-        <h1 className="text-xl font-bold tracking-tight">Pengaturan</h1>
-        <p className="text-sm text-text-tertiary mt-1">Kelola data, ekspor/impor, dan pengaturan akun</p>
-      </div>
-
-      <div className="flex gap-1 bg-white rounded-2xl p-1.5 border border-black/[0.06] overflow-x-auto">
-        {[
-          { key: 'ekspor-impor', label: 'Ekspor / Impor', icon: 'fa-download' },
-          { key: 'profil', label: 'Profil', icon: 'fa-user' },
-        ].map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key as any)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-              tab === t.key
-                ? 'bg-gradient-to-r from-violet-600 to-indigo-500 text-white shadow-md'
-                : 'text-text-secondary hover:bg-black/5'
-            }`}
-          >
-            <i className={`fas ${t.icon}`}></i>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'ekspor-impor' && <ExportImportTab />}
-      {tab === 'profil' && <ProfileTab />}
     </div>
   );
 }

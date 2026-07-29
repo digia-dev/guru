@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../api/client';
-import { Subject } from '../types';
+import { Subject, AcademicYear } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useClasses } from '../hooks/useClasses';
 import Card from '../components/ui/Card';
@@ -14,6 +14,12 @@ export default function AnalisisNilai() {
   const [selectedClass, setSelectedClass] = useState('');
   useEffect(() => { if (classes.length > 0 && !selectedClass) setSelectedClass(classes[0]); }, [classes, selectedClass]);
   const [semester, setSemester] = useState<'Ganjil' | 'Genap'>(() => new Date().getMonth() + 1 >= 7 ? 'Ganjil' : 'Genap');
+  const [tahunAjaran, setTahunAjaran] = useState('');
+  const { data: academicYears = [] } = useQuery({
+    queryKey: ['academic-years'],
+    queryFn: async () => { const { data } = await apiClient.get('/academic-years'); return (data.data || []) as AcademicYear[]; },
+  });
+  useEffect(() => { if (academicYears.length > 0 && !tahunAjaran) setTahunAjaran(String(academicYears.find(y => y.is_active)?.id || academicYears[0].id)); }, [academicYears, tahunAjaran]);
   const [selectedSubject, setSelectedSubject] = useState('');
 
   const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
@@ -31,10 +37,10 @@ export default function AnalisisNilai() {
   const kkm = allSubjects.find(s => s.code === selectedSubject)?.description ? 75 : 75;
 
   const { data: result, isFetching } = useQuery({
-    queryKey: ['analytics', selectedClass, semester, subjectId],
+    queryKey: ['analytics', selectedClass, semester, tahunAjaran, subjectId],
     queryFn: async () => {
       if (!selectedClass || !subjectId) return null;
-      const { data } = await apiClient.get(`/analytics?class=${encodeURIComponent(selectedClass)}&semester=${semester}&subject_id=${subjectId}`);
+      const { data } = await apiClient.get(`/analytics?class=${encodeURIComponent(selectedClass)}&semester=${semester}&academic_year_id=${tahunAjaran}&subject_id=${subjectId}`);
       return data.data as {
         kkm: number; total_students: number; below_kkm: number;
         class_averages: { pengetahuan_rata: number | null; keterampilan_rata: number | null; sikap_rata: number | null; sts: number | null; sas: number | null };
@@ -49,7 +55,7 @@ export default function AnalisisNilai() {
   return (
     <div className="space-y-6 animate-fade-in">
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="label">Kelas</label>
           <div className="relative">
@@ -65,6 +71,15 @@ export default function AnalisisNilai() {
             <select value={semester} onChange={e => setSemester(e.target.value as any)} className="select-field">
               <option value="Ganjil">Ganjil</option>
               <option value="Genap">Genap</option>
+            </select>
+            <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
+          </div>
+        </div>
+        <div>
+          <label className="label">Tahun Ajaran</label>
+          <div className="relative">
+            <select value={tahunAjaran} onChange={e => setTahunAjaran(e.target.value)} className="select-field">
+              {academicYears.map(y => <option key={y.id} value={y.id}>{y.name}</option>)}
             </select>
             <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
           </div>
@@ -111,17 +126,26 @@ export default function AnalisisNilai() {
           {/* Class Averages */}
           <Card>
             <h3 className="font-semibold mb-4">Rata-rata Kelas</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
               {[
                 { label: 'Pengetahuan', value: result.class_averages.pengetahuan_rata, color: 'bg-blue-500' },
                 { label: 'Keterampilan', value: result.class_averages.keterampilan_rata, color: 'bg-emerald-500' },
                 { label: 'Sikap', value: result.class_averages.sikap_rata, color: 'bg-amber-500' },
                 { label: 'STS', value: result.class_averages.sts, color: 'bg-purple-500' },
                 { label: 'SAS', value: result.class_averages.sas, color: 'bg-rose-500' },
+                {
+                  label: 'Total Rata-rata',
+                  value: (() => {
+                    const vals = [result.class_averages.pengetahuan_rata, result.class_averages.keterampilan_rata, result.class_averages.sikap_rata, result.class_averages.sts, result.class_averages.sas];
+                    const valid = vals.filter(v => v !== null) as number[];
+                    return valid.length > 0 ? Math.round(valid.reduce((a, b) => a + b, 0) / valid.length) : null;
+                  })(),
+                  color: 'bg-gradient-to-r from-violet-500 to-indigo-500',
+                },
               ].map(item => (
                 <div key={item.label} className="text-center">
                   <div className="text-xs text-text-tertiary mb-1">{item.label}</div>
-                  <div className="text-lg font-bold">{item.value !== null ? item.value : '-'}</div>
+                  <div className={`text-lg font-bold ${item.label === 'Total Rata-rata' ? 'text-primary' : ''}`}>{item.value !== null ? item.value : '-'}</div>
                   <div className="progress-bar mt-1.5">
                     <div className={`progress-bar-fill ${item.color}`} style={{ width: `${((item.value ?? 0) / 100) * 100}%` }}></div>
                   </div>
@@ -130,25 +154,21 @@ export default function AnalisisNilai() {
             </div>
           </Card>
 
-          {/* Ranking Chart */}
+          {/* Ranking List */}
           <Card>
             <h3 className="font-semibold mb-4">Ranking Siswa</h3>
             <div className="space-y-1">
               {result.ranking.map((r, i) => {
-                const pct = (r.average / barMax) * 100;
                 const below = r.average < result.kkm;
                 return (
-                  <div key={r.student_id} className="flex items-center gap-3 py-1.5">
-                    <span className={`w-6 text-center text-xs font-bold ${i < 3 ? 'text-primary' : 'text-text-tertiary'}`}>
-                      {i === 0 ? <i className="fas fa-trophy text-amber-500"></i> : i === 1 ? <i className="fas fa-medal text-gray-400"></i> : i === 2 ? <i className="fas fa-medal text-orange-400"></i> : r.rank}
-                    </span>
-                    <span className="text-sm flex-1 truncate">{r.name}</span>
-                    <div className="flex-1 max-w-[200px]">
-                      <div className="progress-bar">
-                        <div className={`progress-bar-fill ${below ? 'bg-danger' : 'bg-primary'} transition-all`} style={{ width: `${pct}%` }}></div>
-                      </div>
+                  <div key={r.student_id} className="flex items-center justify-between py-1.5 px-2 rounded-xl hover:bg-surface-secondary">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className={`w-6 text-center text-xs font-bold shrink-0 ${i < 3 ? 'text-primary' : 'text-text-tertiary'}`}>
+                        {i === 0 ? <i className="fas fa-trophy text-amber-500"></i> : i === 1 ? <i className="fas fa-medal text-gray-400"></i> : i === 2 ? <i className="fas fa-medal text-orange-400"></i> : r.rank}
+                      </span>
+                      <span className="text-sm truncate">{r.name}</span>
                     </div>
-                    <span className={`text-xs font-bold w-10 text-right ${below ? 'text-danger' : ''}`}>{r.average}</span>
+                    <span className={`text-xs font-bold shrink-0 ${below ? 'text-danger' : ''}`}>{r.average}</span>
                   </div>
                 );
               })}
@@ -162,7 +182,7 @@ export default function AnalisisNilai() {
                 <thead>
                   <tr className="bg-surface-secondary">
                     <th className="table-header w-12 text-center">#</th>
-                    <th className="table-header min-w-[140px]">Nama</th>
+                    <th className="table-header min-w-[100px] sm:min-w-[140px]">Nama</th>
                     <th className="table-header text-center">Pengetahuan</th>
                     <th className="table-header text-center">Keterampilan</th>
                     <th className="table-header text-center">Sikap</th>
