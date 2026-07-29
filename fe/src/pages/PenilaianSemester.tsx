@@ -200,7 +200,7 @@ export default function PenilaianSemester() {
         </div>
       )}
 
-      {changesRef.current.size > 0 && saveStatus !== 'saving' && saveStatus !== 'saved' && (
+      {changesRef.current.size > 0 && saveStatus !== 'saved' && (
         <button onClick={() => saveNow()} disabled={saveStatus === 'saving'}
           className="floating-save-btn text-white disabled:opacity-50 bg-gradient-to-r from-violet-600 to-indigo-500 shadow-apple-lg">
           <i className="fas fa-save text-base"></i>

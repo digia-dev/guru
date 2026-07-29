@@ -5,7 +5,7 @@ const MAX_PULL = 120;
 
 interface Props {
   children: ReactNode;
-  onRefresh?: () => Promise<void>;
+  onRefresh?: () => void | Promise<void>;
 }
 
 function getScrollTop(): number {

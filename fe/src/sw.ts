@@ -1,14 +1,14 @@
 /// <reference lib="webworker" />
 
-const sw = self as ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision: string | null }> };
-
 import { precacheAndRoute } from 'workbox-precaching';
 
-precacheAndRoute(sw.__WB_MANIFEST);
+declare const self: ServiceWorkerGlobalScope;
 
-sw.addEventListener('push', (event) => {
+precacheAndRoute((self as any).__WB_MANIFEST);
+
+self.addEventListener('push', (event) => {
   const data = event.data?.json() ?? { title: 'AppGuru', body: '', icon: '/icon.svg' };
-  const options: NotificationOptions = {
+  const options: NotificationOptions & { vibrate?: number[]; actions?: any[] } = {
     body: data.body ?? '',
     icon: data.icon ?? '/icon.svg',
     badge: '/icon.svg',
@@ -17,17 +17,17 @@ sw.addEventListener('push', (event) => {
     actions: data.actions ?? [],
     requireInteraction: true,
   };
-  event.waitUntil(sw.registration.showNotification(data.title, options));
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
-sw.addEventListener('notificationclick', (event) => {
+self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data?.url ?? '/';
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       const existing = windowClients.find((c) => c.url === url && 'focus' in c);
-      if (existing) { existing.focus(); return; }
-      if (clients.openWindow) return clients.openWindow(url);
+      if (existing) { (existing as WindowClient).focus(); return; }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
     }),
   );
 });

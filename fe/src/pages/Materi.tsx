@@ -53,7 +53,7 @@ function SoalPreview({ soal }: { soal: Soal[] }) {
             <div className="space-y-1 ml-2">
               {s.opsi.map((o, j) => {
                 const isCorrect = Array.isArray(s.jawaban)
-                  ? s.jawaban.includes(o.charAt(0))
+                  ? (s.jawaban as string[]).includes(o.charAt(0))
                   : s.jawaban === o.charAt(0);
                 return (
                   <p key={j} className={`text-xs ${isCorrect ? 'text-green-600 font-semibold' : 'text-text-secondary'}`}>
