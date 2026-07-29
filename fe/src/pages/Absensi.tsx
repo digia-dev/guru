@@ -18,6 +18,7 @@ export default function Absensi() {
   const queryClient = useQueryClient();
   const [selectedClass, setSelectedClass] = useState('');
   useEffect(() => { if (classes.length > 0 && !selectedClass) setSelectedClass(classes[0]); }, [classes, selectedClass]);
+  const [semester, setSemester] = useState<'Ganjil' | 'Genap'>(() => new Date().getMonth() + 1 >= 7 ? 'Ganjil' : 'Genap');
   const [selectedDate, setSelectedDate] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [selectedSubject, setSelectedSubject] = useState('');
   const [changes, setChanges] = useState<Map<string, { keterangan: 'H' | 'S' | 'I' | 'A' | null; name: string }>>(new Map());
@@ -48,6 +49,16 @@ export default function Absensi() {
     },
   });
 
+  const { data: semesterAtt } = useQuery({
+    queryKey: ['semester-attendance', selectedClass, semester],
+    queryFn: async () => {
+      const { data } = await apiClient.get(`/attendance/semester-summary?class=${encodeURIComponent(selectedClass)}&semester=${semester}`);
+      return data.data as Array<{ student_id: string; hadir_pct: number }>;
+    },
+    enabled: !!selectedClass,
+  });
+  const semAttMap = new Map(semesterAtt?.map((a: any) => [a.student_id, a.hadir_pct]) || []);
+
   const attendanceMap = new Map(existingAttendance?.map((a: any) => [a.student_id, a.keterangan]) || []);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
@@ -63,6 +74,7 @@ export default function Absensi() {
       const subjectId = allSubjects.find(s => s.code === selectedSubject)?.id || null;
       await apiClient.post('/attendance/batch', { class: selectedClass, event_date: selectedDate, subject_id: subjectId, records });
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['semester-attendance'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       setSaveStatus('saved');
       setChanges(new Map());
@@ -129,7 +141,7 @@ export default function Absensi() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div>
           <label className="label">Kelas</label>
           <div className="relative">
@@ -153,6 +165,16 @@ export default function Absensi() {
               <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
             </div>
           )}
+        </div>
+        <div>
+          <label className="label">Semester</label>
+          <div className="relative">
+            <select value={semester} onChange={(e) => { setSemester(e.target.value as any); setChanges(new Map()); }} className="select-field">
+              <option value="Ganjil">Ganjil</option>
+              <option value="Genap">Genap</option>
+            </select>
+            <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
+          </div>
         </div>
         <div>
           <label className="label">Tanggal</label>
@@ -213,15 +235,23 @@ export default function Absensi() {
                     <p className="text-[11px] text-text-tertiary">{student.student_id}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  {ATTENDANCE_STATUS.map((s) => (
-                    <button
-                      key={s}
-                      className={`attendance-btn ${status === s ? 'active' : ''} cursor-pointer active:scale-90`}
-                      data-status={s}
-                      onClick={() => setStatus(student.student_id, s, student.name)}
-                    >{s}</button>
-                  ))}
+                <div className="flex items-center gap-3">
+                  <div className="text-center hidden sm:block">
+                    <div className="text-[10px] text-text-tertiary">Kehadiran Semester</div>
+                    <div className={`text-xs font-bold ${(semAttMap.get(student.student_id) ?? 0) >= 75 ? 'text-success' : 'text-danger'}`}>
+                      {semAttMap.get(student.student_id) != null ? `${semAttMap.get(student.student_id)}%` : '-'}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {ATTENDANCE_STATUS.map((s) => (
+                      <button
+                        key={s}
+                        className={`attendance-btn ${status === s ? 'active' : ''} cursor-pointer active:scale-90`}
+                        data-status={s}
+                        onClick={() => setStatus(student.student_id, s, student.name)}
+                      >{s}</button>
+                    ))}
+                  </div>
                 </div>
               </div>
             );

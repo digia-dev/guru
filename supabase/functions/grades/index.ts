@@ -47,19 +47,31 @@ Deno.serve(async (req) => {
         const totalH = a.H + a.S + a.I + a.A;
         const kehadiran = totalH > 0 ? Math.round((a.H / totalH) * 100) : 0;
 
-        const pBabRata = (bab: any) => { const vals = [1, 2, 3, 4, 5].map(i => { const v = bab?.[`pengetahuan_${i}`]; return v != null ? parseFloat(v) : null; }).filter(v => v != null); return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0; };
-        const kBabRata = (bab: any) => { const vals = [1, 2, 3, 4, 5].map(i => { const v = bab?.[`keterampilan_${i}`]; return v != null ? parseFloat(v) : null; }).filter(v => v != null); return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0; };
-        const pRata = [1, 2, 3, 4].reduce((sum, b) => sum + pBabRata(g[`bab_${b}`]), 0) / 4;
-        const kRata = [1, 2, 3, 4].reduce((sum, b) => sum + kBabRata(g[`bab_${b}`]), 0) / 4;
+        const babAvg = (bab: any, type: string) => {
+          if (bab?.[`${type}_rata`] != null) return parseFloat(bab[`${type}_rata`]);
+          const vals = [1, 2, 3, 4, 5].map(i => { const v = bab?.[`${type}_${i}`]; return v != null ? parseFloat(v) : null; }).filter(v => v != null);
+          return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+        };
+        const pRatas: number[] = []; const kRatas: number[] = [];
+        for (let b = 1; b <= 4; b++) {
+          const bp = babAvg(g[`bab_${b}`], 'pengetahuan');
+          const bk = babAvg(g[`bab_${b}`], 'keterampilan');
+          if (bp != null) pRatas.push(bp);
+          if (bk != null) kRatas.push(bk);
+        }
+        const pRata = pRatas.length ? Math.round(pRatas.reduce((a, b) => a + b, 0) / pRatas.length) : null;
+        const kRata = kRatas.length ? Math.round(kRatas.reduce((a, b) => a + b, 0) / kRatas.length) : null;
         const sMap: any = { 'Sangat Baik': 90, 'Baik': 80, 'Cukup': 70, 'Kurang': 60 };
-        const sRata = [g.sikap_jujur, g.sikap_disiplin, g.sikap_tgg_jawab].filter(Boolean).map((v: string) => sMap[v] || 0);
-        const sikapRata = sRata.length ? Math.round(sRata.reduce((a, b) => a + b, 0) / sRata.length) : 0;
+        const sVals = [g.sikap_jujur, g.sikap_disiplin, g.sikap_tgg_jawab].filter(Boolean).map((v: string) => sMap[v]).filter(v => v != null);
+        const sikapRata = sVals.length ? Math.round(sVals.reduce((a, b) => a + b, 0) / sVals.length) : null;
 
-        const nHarian = (pRata > 0 && kRata > 0 && sikapRata > 0) ? Math.round((pRata + kRata + sikapRata) / 3) : 0;
-        const sts = g.sts || 0; const sas = g.sas || 0;
-        const nRapor = Math.round((nHarian * 0.5) + (sts * 0.1) + (sas * 0.2) + (kehadiran * 0.2));
+        const hasAll3 = pRata != null && kRata != null && sikapRata != null;
+        const nHarian = hasAll3 ? Math.round((pRata! + kRata! + sikapRata!) / 3) : (pRata != null || kRata != null ? Math.round(((pRata || 0) + (kRata || 0)) / ((pRata ? 1 : 0) + (kRata ? 1 : 0))) : null);
+        const sts = g.sts || null; const sas = g.sas || null;
+        const nRapor = (nHarian != null || sts || sas || kehadiran > 0)
+          ? Math.round((nHarian || 0) * 0.5 + (sts || 0) * 0.1 + (sas || 0) * 0.2 + kehadiran * 0.2) : null;
 
-        return { student_id: s.student_id, name: s.name, class: s.class, rata_harian: nHarian, rata_kehadiran: `${kehadiran}%`, sts: sts || null, sas: sas || null, nilai_rapor: nRapor, grade_id: g.id || null };
+        return { student_id: s.student_id, name: s.name, class: s.class, rata_harian: nHarian, rata_kehadiran: `${kehadiran}%`, sts, sas, nilai_rapor: nRapor, grade_id: g.id || null };
       });
       return json({ success: true, data });
     }
@@ -87,7 +99,7 @@ Deno.serve(async (req) => {
           await supabase.from('grades').update({
             bab_1: g.bab_1, bab_2: g.bab_2, bab_3: g.bab_3, bab_4: g.bab_4,
             pengetahuan_rata: g.pengetahuan_rata, keterampilan_rata: g.keterampilan_rata, sikap_rata: g.sikap_rata,
-            sikap_jujur: g.sikap_jujur, sikap_disiplin: g.sikap_tgg_jawab, sts: g.sts, sas: g.sas, subject_id: g.subject_id || null,
+            sikap_jujur: g.sikap_jujur, sikap_disiplin: g.sikap_disiplin, sikap_tgg_jawab: g.sikap_tgg_jawab, sts: g.sts, sas: g.sas, subject_id: g.subject_id || null,
           }).eq('id', existing.id);
         } else {
           await supabase.from('grades').insert({

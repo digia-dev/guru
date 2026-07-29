@@ -33,6 +33,30 @@ Deno.serve(async (req) => {
       return json({ success: true, data: { ...counts, total, persentase: total > 0 ? Math.round((counts.H / total) * 100) : 0 } });
     }
 
+    if (method === 'GET' && getPath(req).includes('/semester-summary')) {
+      const sem = getSearchParams(req).get('semester') || 'Ganjil';
+      const now = new Date(); const year = now.getFullYear();
+      const sd = sem === 'Ganjil' ? `${year}-07-01` : `${year}-01-01`;
+      const ed = sem === 'Ganjil' ? `${year}-12-31` : `${year}-06-30`;
+      let sq = supabase.from('students').select('student_id').eq('class', className);
+      if (!isAdm) sq = sq.eq('teacher_id', userId);
+      const { data: students } = await sq;
+      if (!students?.length) return json({ success: true, data: [] });
+      const ids = students.map(s => s.student_id);
+      let aq = supabase.from('attendance').select('student_id, keterangan').in('student_id', ids).gte('event_date', sd).lte('event_date', ed);
+      if (!isAdm) aq = aq.eq('teacher_id', userId);
+      const { data: rows } = await aq;
+      const map = new Map<string, { H: number; total: number }>();
+      (rows || []).forEach((r: any) => {
+        if (!map.has(r.student_id)) map.set(r.student_id, { H: 0, total: 0 });
+        const entry = map.get(r.student_id)!;
+        entry.total++;
+        if (r.keterangan === 'H') entry.H++;
+      });
+      const result = Array.from(map.entries()).map(([student_id, d]) => ({ student_id, hadir_pct: d.total > 0 ? Math.round((d.H / d.total) * 100) : 0 }));
+      return json({ success: true, data: result });
+    }
+
     if (method === 'GET') {
       let q = supabase.from('attendance').select('*').order('event_date').order('student_id');
       if (!isAdm) q = q.eq('teacher_id', userId);

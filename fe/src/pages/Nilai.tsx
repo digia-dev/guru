@@ -192,6 +192,9 @@ export default function Nilai() {
                   <th className="table-header text-center">Rata Pengetahuan</th>
                   <th className="table-header text-center">Rata Keterampilan</th>
                   <th className="table-header text-center">Rata Sikap</th>
+                  <th className="table-header text-center">STS</th>
+                  <th className="table-header text-center">SAS</th>
+                  <th className="table-header text-center">Nilai Rapor</th>
                 </tr>
               ) : (
                 <>
@@ -212,7 +215,7 @@ export default function Nilai() {
             <tbody>
               {students.length === 0 ? (
                 <tr>
-                  <td colSpan={bab === 'all' ? 4 : 17} className="text-center py-12 text-text-tertiary">
+                  <td colSpan={bab === 'all' ? 7 : 17} className="text-center py-12 text-text-tertiary">
                     <i className="fas fa-users text-2xl mb-2 block"></i>
                     Tidak ada siswa di kelas ini
                   </td>
@@ -225,12 +228,22 @@ export default function Nilai() {
                     ambilNilai(gradeMap, gradeChanges, student.student_id, 'sikap_disiplin'),
                     ambilNilai(gradeMap, gradeChanges, student.student_id, 'sikap_tgg_jawab'),
                   );
+                  const g = gradeMap.get(student.student_id);
+                  const sts = (g as any)?.sts ?? null;
+                  const sas = (g as any)?.sas ?? null;
+                  const pRataNum = overall.pengetahuan_rata ?? 0;
+                  const kRataNum = overall.keterampilan_rata ?? 0;
+                  const sRataNum = sRata ?? 0;
+                  const nRapor = sts || sas ? Math.round((((pRataNum + kRataNum + sRataNum) / 3) * 0.5) + (sts ?? 0) * 0.1 + (sas ?? 0) * 0.2) : null;
                   return (
                     <tr key={student.student_id} className="hover:bg-surface-secondary transition-colors">
                       <td className="table-cell sticky left-0 bg-white z-10 font-medium">{student.name}</td>
                       <td className="table-cell text-center font-bold bg-surface-secondary/50">{overall.pengetahuan_rata ?? '-'}</td>
                       <td className="table-cell text-center font-bold bg-surface-secondary/50">{overall.keterampilan_rata ?? '-'}</td>
                       <td className="table-cell text-center font-bold bg-surface-secondary/50">{sRata ?? '-'}</td>
+                      <td className="table-cell text-center font-semibold">{sts ?? '-'}</td>
+                      <td className="table-cell text-center font-semibold">{sas ?? '-'}</td>
+                      <td className="table-cell text-center font-bold text-primary bg-soft-purple">{nRapor ?? '-'}</td>
                     </tr>
                   );
                 }
