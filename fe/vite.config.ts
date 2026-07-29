@@ -6,8 +6,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   plugins: [react(), VitePWA({
     strategies: 'injectManifest',
-    srcDir: 'src',
-    filename: 'sw.ts',
+    srcDir: 'public',
+    filename: 'sw.js',
     registerType: 'autoUpdate',
     includeAssets: ['icon.svg'],
     manifest: {
