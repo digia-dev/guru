@@ -92,17 +92,22 @@ async function handleRegister(req: Request) {
   const { data: existing } = await supabaseAdmin.from('users').select('id').eq('email', email).maybeSingle();
   if (existing) return json({ success: false, error: 'Email already registered' }, 409);
 
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-    email, password, email_confirm: false, user_metadata: { full_name: name },
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email, password,
+    options: { data: { full_name: name } },
   });
   if (authError) return json({ success: false, error: authError.message }, 400);
+  if (!authData.user) return json({ success: false, error: 'Gagal mendaftar' }, 500);
 
   const { data: newUser, error: insertError } = await supabaseAdmin.from('users').insert({
     email, name, role: 'guru', teacher_classes: teacher_classes || [], auth_user_id: authData.user.id,
   }).select().single();
-  if (insertError) return json({ success: false, error: insertError.message }, 500);
+  if (insertError) {
+    await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+    return json({ success: false, error: insertError.message }, 500);
+  }
 
-  if (newUser?.id) await logActivity(newUser.id, 'REGISTER', 'user', newUser.id?.toString(), { name: body.name, email: body.email });
+  if (newUser?.id) await logActivity(newUser.id, 'REGISTER', 'user', newUser.id?.toString(), { name, email });
 
   return json({ success: true, data: { id: newUser.id, email: newUser.email, name: newUser.name } }, 201);
 }

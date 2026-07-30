@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { Notification } from '../types';
+import toast from 'react-hot-toast';
 
 const typeIcons: Record<string, string> = {
   system: 'fa-info-circle text-blue-500',
@@ -64,6 +65,17 @@ export default function NotificationBell() {
     } catch {}
   };
 
+  const handleDeleteAll = async () => {
+    try {
+      await apiClient.delete('/notifications/delete-all');
+      setNotifications([]);
+      setUnreadCount(0);
+      toast.success('Semua notifikasi dihapus');
+    } catch {
+      toast.error('Gagal menghapus notifikasi');
+    }
+  };
+
   const handleClick = (n: Notification) => {
     if (!n.is_read) handleMarkRead(n.id);
     if (n.link) navigate(n.link);
@@ -100,11 +112,18 @@ export default function NotificationBell() {
         <div className="absolute right-0 top-full mt-2 w-80 md:w-96 bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-[70vh] flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <h3 className="font-semibold text-sm">Notifikasi</h3>
-            {unreadCount > 0 && (
-              <button onClick={handleMarkAllRead} className="text-xs text-indigo-600 hover:text-indigo-800">
-                Tandai semua dibaca
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {notifications.length > 0 && (
+                <button onClick={handleDeleteAll} className="text-xs text-red-500 hover:text-red-700">
+                  Hapus semua
+                </button>
+              )}
+              {unreadCount > 0 && (
+                <button onClick={handleMarkAllRead} className="text-xs text-indigo-600 hover:text-indigo-800">
+                  Tandai semua dibaca
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="overflow-y-auto flex-1">

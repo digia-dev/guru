@@ -54,6 +54,14 @@
     @apply rounded-xl bg-[#F5F5F7] border-transparent px-4 py-3 text-sm text-text-primary transition-all duration-200 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary/30 outline-none w-full appearance-none;
   }
 
+  .input-field-sm {
+    @apply rounded-xl bg-[#F5F5F7] border-transparent px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary transition-all duration-200 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary/30 outline-none w-full;
+  }
+
+  .select-field-sm {
+    @apply rounded-xl bg-[#F5F5F7] border-transparent px-3 py-2 text-sm text-text-primary transition-all duration-200 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary/30 outline-none w-full appearance-none;
+  }
+
   .label {
     @apply text-xs font-medium text-text-secondary mb-1.5 block;
   }

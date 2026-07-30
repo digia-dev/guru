@@ -72,55 +72,55 @@ function AgendaModal({ isOpen, onClose, activity, currentDate, teacherClasses, t
         isOpen ? 'opacity-100' : 'opacity-0'
       )} />
       <div className={clsx(
-        'relative bg-white rounded-3xl shadow-2xl max-w-md w-full transition-all duration-300 ease-out',
+        'relative bg-white rounded-3xl shadow-2xl max-w-sm w-full transition-all duration-300 ease-out',
         isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       )} onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.06]">
-          <h3 className="text-lg font-semibold">{activity ? 'Edit Jadwal' : 'Tambah Jadwal Baru'}</h3>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5"><i className="fas fa-times text-text-tertiary"></i></button>
+        <div className="flex items-center justify-between px-5 py-3 border-b border-black/[0.06]">
+          <h3 className="text-base font-semibold">{activity ? 'Edit Jadwal' : 'Tambah Jadwal Baru'}</h3>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-black/5"><i className="fas fa-times text-text-tertiary text-sm"></i></button>
         </div>
-        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+        <div className="p-5 space-y-3 max-h-[70vh] overflow-y-auto">
           <div>
             <label className="label">Tanggal</label>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input-field" />
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input-field-sm" />
           </div>
           <div>
             <label className="label">Kelas</label>
             <div className="relative">
-              <select value={kelas} onChange={(e) => setKelas(e.target.value)} className="select-field">
+              <select value={kelas} onChange={(e) => setKelas(e.target.value)} className="select-field-sm">
                 {teacherClasses.map((c) => <option key={c} value={c}>Kelas {c}</option>)}
               </select>
-              <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
+              <i className="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
             </div>
           </div>
           <div>
             <label className="label">Mata Pelajaran</label>
             {teacherSubjects.length <= 1 ? (
-              <div className="input-field bg-surface-secondary text-text-primary cursor-default flex items-center">
+              <div className="input-field-sm bg-surface-secondary text-text-primary cursor-default flex items-center">
                 {teacherSubjects[0]?.name || '-'}
               </div>
             ) : (
               <div className="relative">
-                <select value={subjectCode} onChange={(e) => setSubjectCode(e.target.value)} className="select-field">
+                <select value={subjectCode} onChange={(e) => setSubjectCode(e.target.value)} className="select-field-sm">
                   {teacherSubjects.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
                 </select>
-                <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
+                <i className="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary text-xs pointer-events-none"></i>
               </div>
             )}
           </div>
           <div>
             <label className="label">Waktu</label>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {timeSlots.map((slot, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input type="time" value={slot.start} onChange={(e) => { const t = [...timeSlots]; t[i].start = e.target.value; setTimeSlots(t); }} className="input-field" />
-                  <span className="text-text-tertiary">—</span>
-                  <input type="time" value={slot.end} onChange={(e) => { const t = [...timeSlots]; t[i].end = e.target.value; setTimeSlots(t); }} className="input-field" />
-                  {timeSlots.length > 1 && <button onClick={() => setTimeSlots(timeSlots.filter((_, j) => j !== i))} className="text-danger"><i className="fas fa-times-circle"></i></button>}
+                <div key={i} className="flex items-center gap-1.5">
+                  <input type="time" value={slot.start} onChange={(e) => { const t = [...timeSlots]; t[i].start = e.target.value; setTimeSlots(t); }} className="input-field-sm" />
+                  <span className="text-text-tertiary text-sm">—</span>
+                  <input type="time" value={slot.end} onChange={(e) => { const t = [...timeSlots]; t[i].end = e.target.value; setTimeSlots(t); }} className="input-field-sm" />
+                  {timeSlots.length > 1 && <button onClick={() => setTimeSlots(timeSlots.filter((_, j) => j !== i))} className="text-danger text-sm"><i className="fas fa-times-circle"></i></button>}
                 </div>
               ))}
               {timeSlots.length < 3 && (
-                <button onClick={() => setTimeSlots([...timeSlots, { start: '07:00', end: '08:00' }])} className="text-sm text-primary font-medium hover:underline">
+                <button onClick={() => setTimeSlots([...timeSlots, { start: '07:00', end: '08:00' }])} className="text-xs text-primary font-medium hover:underline">
                   <i className="fas fa-plus-circle mr-1"></i>Tambah Jam Lain
                 </button>
               )}
@@ -128,10 +128,10 @@ function AgendaModal({ isOpen, onClose, activity, currentDate, teacherClasses, t
           </div>
           <div>
             <label className="label">Catatan Kegiatan</label>
-            <textarea value={catatan} onChange={(e) => setCatatan(e.target.value)} className="input-field" rows={3} placeholder="Deskripsi kegiatan pembelajaran..." />
+            <textarea value={catatan} onChange={(e) => setCatatan(e.target.value)} className="input-field-sm" rows={2} placeholder="Deskripsi kegiatan..." />
           </div>
           <div>
-            <button onClick={async () => { setAiLoading(true); setAiIdeas(''); try { const { data } = await apiClient.post('/ai/activity-ideas', { class: kelas, date }); setAiIdeas(data.data); } catch { toast.error('Gagal mendapatkan ide dari AI'); } setAiLoading(false); }} disabled={aiLoading} className="w-full btn-secondary flex items-center justify-center gap-2">
+            <button onClick={async () => { setAiLoading(true); setAiIdeas(''); try { const { data } = await apiClient.post('/ai/activity-ideas', { class: kelas, date }); setAiIdeas(data.data); } catch { toast.error('Gagal mendapatkan ide dari AI'); } setAiLoading(false); }} disabled={aiLoading} className="w-full btn-secondary flex items-center justify-center gap-2 text-sm py-2">
               {aiLoading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-wand-magic-sparkles text-primary"></i>}
               {aiLoading ? 'Meminta AI...' : 'Ide Kegiatan (AI)'}
             </button>

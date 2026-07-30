@@ -86,6 +86,11 @@ Deno.serve(async (req) => {
       return json({ success: true });
     }
 
+    if (method === 'DELETE' && (path === '/delete-all' || path === '/all')) {
+      await supabase.from('notifications').delete().eq('user_id', userId);
+      return json({ success: true });
+    }
+
     if (method === 'PATCH' && path.endsWith('/read')) {
       const notifId = path.split('/').filter(Boolean).slice(-2, -1)[0];
       if (notifId) {
